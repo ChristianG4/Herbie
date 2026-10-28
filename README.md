@@ -1,6 +1,4 @@
-<p align="center"><img src="assets/logo.png" alt="Herbie" width="140"></p>
-
-<h1 align="center">Herbie</h1>
+<p align="center"><img src="assets/logo_herbie.png" alt="Herbie" width="360"></p>
 
 Create printable herbarium labels from a spreadsheet, right in your browser.
 

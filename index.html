@@ -6,14 +6,15 @@
   <meta name="author" content="Hans Christian Groß">
   <meta name="description" content="Create printable herbarium labels from a spreadsheet: map columns, place localities on a map, print. Everything runs locally in your browser.">
   <title>Herbie · Herbarium labels</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 29V12' stroke='%232f5d3a' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M16 14C9 13 6 7 7 3c6 0 10 4 9 11zM16 19c6-1 9-5 9-10-6 0-9 4-9 10z' fill='%235b8a4f'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="apple-touch-icon" href="assets/logo.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 29V12" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M16 14C9 13 6 7 7 3c6 0 10 4 9 11zM16 19c6-1 9-5 9-10-6 0-9 4-9 10z" fill="currentColor" opacity=".75"/></svg>
+      <img src="assets/logo.png" alt="Herbie logo" class="logo">
       <div>
         <h1>Herbie</h1>
         <p>Spreadsheet in, herbarium labels out</p>
@@ -67,6 +68,12 @@
           </div>
           <p class="hint">Tell Herbie which column of your table holds which information. Known column names are detected automatically. Unmapped fields stay empty and can be filled in per specimen later.</p>
           <div id="mapping" class="mapping"></div>
+          <div class="custom-box">
+            <h3>Own fields</h3>
+            <p class="hint">Want more on the label? Add any other column of your table, e.g. a colour or a project, and choose the name that should be printed. Example: column <i>col</i>, name <i>Colour</i> prints "Colour: red".</p>
+            <div id="custom-list"></div>
+            <button type="button" class="btn small" id="btn-add-custom">+ Add own field</button>
+          </div>
           <div class="row end gap">
             <button class="btn ghost" data-goto="daten">Back</button>
             <button class="btn primary" id="btn-to-labels">Continue to labels</button>
@@ -159,16 +166,12 @@
           </div>
 
           <fieldset>
-            <legend>Show</legend>
-            <div class="checks">
-              <label><input type="checkbox" data-show="trivial"> Common name</label>
-              <label><input type="checkbox" data-show="familie"> Family</label>
-              <label><input type="checkbox" data-show="coords"> Coordinates</label>
-              <label><input type="checkbox" data-show="hoehe"> Elevation</label>
-              <label><input type="checkbox" data-show="habitat"> Habitat</label>
-              <label><input type="checkbox" data-show="notizen"> Notes</label>
-              <label><input type="checkbox" data-show="legdet"> Leg. / Det.</label>
-            </div>
+            <legend>Fields on the label</legend>
+            <p class="hint tiny">Tick to print, drag to change the order.</p>
+            <ul id="show-list" class="show-list"></ul>
+            <label class="inline"><input type="checkbox" data-show="legdet"> Leg. / Det. (footer line)</label>
+            <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash</label>
+            <p class="hint tiny">Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". The Minimal layout has no field names and always leaves empty fields out.</p>
           </fieldset>
 
           <h2>Page</h2>
@@ -259,7 +262,7 @@
           </div>
         </div>
         <form id="edit-form" class="edit-form"></form>
-        <div class="row gap wrap">
+        <div class="row gap wrap" id="coord-tools">
           <button class="btn small" id="btn-geocode">Find locality text on map</button>
           <button class="btn small" id="btn-elev">Get elevation</button>
           <button class="btn small ghost" id="btn-copy-same">Copy coordinates to same locality</button>
@@ -267,6 +270,19 @@
         </div>
       </div>
     </div>
+  </dialog>
+
+  <!-- CONFIRMATION DIALOG -->
+  <dialog id="confirm-dialog" class="confirm-dialog">
+    <form method="dialog">
+      <h3 id="cf-title"></h3>
+      <p id="cf-text"></p>
+      <div id="cf-options" class="cf-options"></div>
+      <div class="row end gap">
+        <button class="btn ghost" value="cancel">Cancel</button>
+        <button class="btn primary" value="ok" id="cf-ok">OK</button>
+      </div>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" hidden></div>

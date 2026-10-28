@@ -1,4 +1,6 @@
-# Herbie
+<p align="center"><img src="assets/logo.png" alt="Herbie" width="140"></p>
+
+<h1 align="center">Herbie</h1>
 
 Create printable herbarium labels from a spreadsheet, right in your browser.
 
@@ -14,11 +16,16 @@ Create printable herbarium labels from a spreadsheet, right in your browser.
 - Detects columns automatically (English, German and Darwin Core names)
 - Data editor with table, on/off switch per specimen and interactive map (OpenStreetMap, topographic, satellite): click to set a locality, drag the marker, search places
 - Picks up coordinates written in the locality text (e.g. `Marburg, 50.8091, 8.8132`)
-- Fetches elevation from a terrain model (Open-Meteo)
+- Finds localities on the map from the locality text, for one specimen or all at once (only missing or overwrite all)
+- Fetches elevation from the Copernicus GLO-90 terrain model via Open-Meteo, for one specimen or all at once; the source is noted and exported
 - Copies coordinates to all specimens with the same locality
+- Every action explains itself and asks for confirmation first
 - Label language: English, German, French, Spanish, Italian, Portuguese, Dutch, Swedish, Polish, Czech or Latin (field names, compass letters, elevation unit)
 - Four label layouts (Classic, Table, Name first, Minimal), frame styles (or no frame), background colours and paper textures (paper, parchment, linen, leaves, dots, ruled, grid, hatch)
-- Customisable labels: header, font, size, date format (incl. Roman month), coordinate format, visible fields
+- Customisable labels: header, font, size, date format (incl. Roman month), coordinate format
+- Choose which fields are printed and drag them into your preferred order
+- Own fields: print any extra column of your table under a name of your choice (e.g. column `col` as "Colour")
+- Empty fields are left out by default, or printed as "Elevation: -" if you prefer
 - Layout: A4 or US Letter, labels per page, margins, skip already used labels on a sheet
 - Correct name formatting: genus and epithets in italics, authors upright
 - Flags overfull labels in red

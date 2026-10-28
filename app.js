@@ -23,25 +23,28 @@
     { key: 'notizen', label: 'Notes',            syn: ['notizen', 'notiz', 'bemerkung', 'bemerkungen', 'anmerkung', 'notes', 'remarks', 'comments'] }
   ];
   const FIELD = Object.fromEntries(FIELDS.map(f => [f.key, f]));
+  function allFields() { return FIELDS.concat(state.custom.map(c => ({ key: c.key, label: c.name || 'Custom field', custom: true }))); }
+  function fieldLabel(k) { const c = state.custom.find(x => x.key === k); return c ? (c.name || 'Custom field') : (FIELD[k] ? FIELD[k].label : k); }
 
   // Label vocabulary per language. E/W: letters used for east/west in that language.
   const TEXT = {
-    en: { name: 'English',    art: 'Species', nr: 'No.',  fam: 'Family',   fundort: 'Locality',   coords: 'Coordinates',  hoehe: 'Elevation',         habitat: 'Habitat',    datum: 'Date',        bem: 'Notes', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm a.s.l.', locale: 'en-GB' },
-    de: { name: 'Deutsch',    art: 'Art',     nr: 'Nr.',  fam: 'Familie',  fundort: 'Fundort',    coords: 'Koordinaten',  hoehe: 'Höhe',              habitat: 'Habitat',    datum: 'Funddatum',   bem: 'Bemerkungen', N: 'N', S: 'S', E: 'O', W: 'W', m: 'm ü. NN',  locale: 'de-DE' },
-    fr: { name: 'Français',   art: 'Espèce',  nr: 'N°',   fam: 'Famille',  fundort: 'Localité',   coords: 'Coordonnées',  hoehe: 'Altitude',          habitat: 'Habitat',    datum: 'Date',        bem: 'Remarques', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm',        locale: 'fr-FR' },
-    es: { name: 'Español',    art: 'Especie', nr: 'N.º',  fam: 'Familia',  fundort: 'Localidad',  coords: 'Coordenadas',  hoehe: 'Altitud',           habitat: 'Hábitat',    datum: 'Fecha',       bem: 'Observaciones', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm s.n.m.', locale: 'es-ES' },
-    it: { name: 'Italiano',   art: 'Specie',  nr: 'N.',   fam: 'Famiglia', fundort: 'Località',   coords: 'Coordinate',   hoehe: 'Altitudine',        habitat: 'Habitat',    datum: 'Data',        bem: 'Note', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm s.l.m.', locale: 'it-IT' },
-    pt: { name: 'Português',  art: 'Espécie', nr: 'N.º',  fam: 'Família',  fundort: 'Localidade', coords: 'Coordenadas',  hoehe: 'Altitude',          habitat: 'Habitat',    datum: 'Data',        bem: 'Observações', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm',        locale: 'pt-PT' },
-    nl: { name: 'Nederlands', art: 'Soort',   nr: 'Nr.',  fam: 'Familie',  fundort: 'Vindplaats', coords: 'Coördinaten',  hoehe: 'Hoogte',            habitat: 'Habitat',    datum: 'Datum',       bem: 'Opmerkingen', N: 'N', S: 'Z', E: 'O', W: 'W', m: 'm',        locale: 'nl-NL' },
-    sv: { name: 'Svenska',    art: 'Art',     nr: 'Nr',   fam: 'Familj',   fundort: 'Lokal',      coords: 'Koordinater',  hoehe: 'Höjd',              habitat: 'Växtplats',  datum: 'Datum',       bem: 'Anmärkningar', N: 'N', S: 'S', E: 'Ö', W: 'V', m: 'm ö.h.',   locale: 'sv-SE' },
-    pl: { name: 'Polski',     art: 'Gatunek', nr: 'Nr',   fam: 'Rodzina',  fundort: 'Stanowisko', coords: 'Współrzędne',  hoehe: 'Wysokość',          habitat: 'Siedlisko',  datum: 'Data',        bem: 'Uwagi', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm n.p.m.', locale: 'pl-PL' },
-    cs: { name: 'Čeština',    art: 'Druh',    nr: 'Č.',   fam: 'Čeleď',    fundort: 'Lokalita',   coords: 'Souřadnice',   hoehe: 'Nadmořská výška',   habitat: 'Stanoviště', datum: 'Datum',       bem: 'Poznámky', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm n. m.',  locale: 'cs-CZ' },
-    la: { name: 'Latina',     art: 'Species', nr: 'No.',  fam: 'Familia',  fundort: 'Locus',      coords: 'Coordinatae',  hoehe: 'Altitudo',          habitat: 'Habitatio',  datum: 'Dies',        bem: 'Notae', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm s.m.',   locale: 'en-GB' }
+    en: { name: 'English',    art: 'Species', triv: 'Common name', nr: 'No.',  fam: 'Family',   fundort: 'Locality',   coords: 'Coordinates',  hoehe: 'Elevation',         habitat: 'Habitat',    datum: 'Date',        bem: 'Notes', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm a.s.l.', locale: 'en-GB' },
+    de: { name: 'Deutsch',    art: 'Art', triv: 'Trivialname',     nr: 'Nr.',  fam: 'Familie',  fundort: 'Fundort',    coords: 'Koordinaten',  hoehe: 'Höhe',              habitat: 'Habitat',    datum: 'Funddatum',   bem: 'Bemerkungen', N: 'N', S: 'S', E: 'O', W: 'W', m: 'm ü. NN',  locale: 'de-DE' },
+    fr: { name: 'Français',   art: 'Espèce', triv: 'Nom commun',  nr: 'N°',   fam: 'Famille',  fundort: 'Localité',   coords: 'Coordonnées',  hoehe: 'Altitude',          habitat: 'Habitat',    datum: 'Date',        bem: 'Remarques', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm',        locale: 'fr-FR' },
+    es: { name: 'Español',    art: 'Especie', triv: 'Nombre común', nr: 'N.º',  fam: 'Familia',  fundort: 'Localidad',  coords: 'Coordenadas',  hoehe: 'Altitud',           habitat: 'Hábitat',    datum: 'Fecha',       bem: 'Observaciones', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm s.n.m.', locale: 'es-ES' },
+    it: { name: 'Italiano',   art: 'Specie', triv: 'Nome comune',  nr: 'N.',   fam: 'Famiglia', fundort: 'Località',   coords: 'Coordinate',   hoehe: 'Altitudine',        habitat: 'Habitat',    datum: 'Data',        bem: 'Note', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm s.l.m.', locale: 'it-IT' },
+    pt: { name: 'Português',  art: 'Espécie', triv: 'Nome comum', nr: 'N.º',  fam: 'Família',  fundort: 'Localidade', coords: 'Coordenadas',  hoehe: 'Altitude',          habitat: 'Habitat',    datum: 'Data',        bem: 'Observações', N: 'N', S: 'S', E: 'E', W: 'O', m: 'm',        locale: 'pt-PT' },
+    nl: { name: 'Nederlands', art: 'Soort', triv: 'Volksnaam',   nr: 'Nr.',  fam: 'Familie',  fundort: 'Vindplaats', coords: 'Coördinaten',  hoehe: 'Hoogte',            habitat: 'Habitat',    datum: 'Datum',       bem: 'Opmerkingen', N: 'N', S: 'Z', E: 'O', W: 'W', m: 'm',        locale: 'nl-NL' },
+    sv: { name: 'Svenska',    art: 'Art', triv: 'Trivialnamn',     nr: 'Nr',   fam: 'Familj',   fundort: 'Lokal',      coords: 'Koordinater',  hoehe: 'Höjd',              habitat: 'Växtplats',  datum: 'Datum',       bem: 'Anmärkningar', N: 'N', S: 'S', E: 'Ö', W: 'V', m: 'm ö.h.',   locale: 'sv-SE' },
+    pl: { name: 'Polski',     art: 'Gatunek', triv: 'Nazwa zwyczajowa', nr: 'Nr',   fam: 'Rodzina',  fundort: 'Stanowisko', coords: 'Współrzędne',  hoehe: 'Wysokość',          habitat: 'Siedlisko',  datum: 'Data',        bem: 'Uwagi', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm n.p.m.', locale: 'pl-PL' },
+    cs: { name: 'Čeština',    art: 'Druh', triv: 'Lidový název',    nr: 'Č.',   fam: 'Čeleď',    fundort: 'Lokalita',   coords: 'Souřadnice',   hoehe: 'Nadmořská výška',   habitat: 'Stanoviště', datum: 'Datum',       bem: 'Poznámky', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm n. m.',  locale: 'cs-CZ' },
+    la: { name: 'Latina',     art: 'Species', triv: 'Nomen vulgare', nr: 'No.',  fam: 'Familia',  fundort: 'Locus',      coords: 'Coordinatae',  hoehe: 'Altitudo',          habitat: 'Habitatio',  datum: 'Dies',        bem: 'Notae', N: 'N', S: 'S', E: 'E', W: 'W', m: 'm s.m.',   locale: 'en-GB' }
   };
 
   const DEFAULT_SETTINGS = {
     title: 'Herbarium', subtitle: '', lang: 'en', datefmt: 'dmy', font: "'Times New Roman', Times, serif", size: 10, coordfmt: 'dec',
-    show: { trivial: false, familie: true, coords: true, hoehe: true, habitat: true, notizen: true, legdet: true },
+    show: { trivial: false, familie: true, fundort: true, coords: true, hoehe: true, habitat: true, datum: true, notizen: true, legdet: true },
+    order: ['trivial', 'familie', 'fundort', 'coords', 'hoehe', 'habitat', 'datum', 'notizen'], showEmpty: false,
     layout: 'classic', frame: 'classic', bg: '#ffffff', texture: 'none',
     paper: 'A4', sort: 'none', cols: 2, rows: 4, skip: 0, margin: 7, gap: 4
   };
@@ -50,6 +53,10 @@
   const LS_SETTINGS = 'herbar.settings.v1';
   const LS_MAPPING = 'herbar.mapping.v1';
   const LS_SESSION = 'herbar.session.v1';
+  const LS_CUSTOM = 'herbar.custom.v1';
+  const ELEV_SOURCE = 'Copernicus GLO-90 via Open-Meteo';
+  // fields that appear in the label body and can be reordered
+  const BODY_FIELDS = { trivial: 'Common name', familie: 'Family', fundort: 'Locality', coords: 'Coordinates', hoehe: 'Elevation', habitat: 'Habitat', datum: 'Date', notizen: 'Notes' };
 
   // ---------------------------------------------------------------- state
   const state = {
@@ -59,6 +66,7 @@
     headers: [],        // column headers of the chosen sheet
     rows: [],           // array of objects {header: value}
     mapping: {},        // fieldKey -> header
+    custom: [],         // user defined fields [{key, name}], column in mapping[key]
     records: [],        // [{id, row, edit:{}, include:true}]
     selected: -1,
     settings: loadJSON(LS_SETTINGS, null) || clone(DEFAULT_SETTINGS)
@@ -286,6 +294,7 @@
     state.headers = headers;
     state.rows = rows;
     state.mapping = opts.mapping || autoMap(headers);
+    restoreCustom(headers);
     buildRecords(opts.records);
     renderMapping();
     enableTabs(true);
@@ -308,6 +317,15 @@
     }
     return map;
   }
+
+  // user defined fields survive between tables if the column exists again
+  function restoreCustom(headers) {
+    state.custom = [];
+    for (const c of loadJSON(LS_CUSTOM, [])) {
+      if (c && c.key && headers.includes(c.column)) { state.custom.push({ key: c.key, name: c.name }); state.mapping[c.key] = c.column; }
+    }
+  }
+  function saveCustom() { saveJSON(LS_CUSTOM, state.custom.map(c => ({ key: c.key, name: c.name, column: state.mapping[c.key] || '' }))); }
 
   function buildRecords(prev) {
     state.records = state.rows.map((row, i) => {
@@ -349,7 +367,63 @@
       });
     });
     $('#row-count').textContent = `${state.records.length} rows from ${state.fileName || 'table'}`;
+    renderCustom();
   }
+
+  function renderCustom() {
+    const opts = ['<option value="">(choose a column)</option>'].concat(state.headers.map(h => `<option value="${esc(h)}">${esc(h)}</option>`)).join('');
+    $('#custom-list').innerHTML = state.custom.map(c => `
+      <div class="custom-row" data-key="${c.key}">
+        <label>Column in your table<select data-cf="column">${opts}</select></label>
+        <label>Name on the label<input type="text" data-cf="name" value="${esc(c.name)}" placeholder="e.g. Colour"></label>
+        <button type="button" class="btn small ghost" data-cf="remove" title="Remove field">Remove</button>
+        <div class="sample"></div>
+      </div>`).join('');
+    state.custom.forEach(c => {
+      const row = $(`.custom-row[data-key="${c.key}"]`);
+      row.querySelector('select').value = state.mapping[c.key] || '';
+      updateCustomSample(c.key);
+    });
+  }
+  function updateCustomSample(key) {
+    const row = $(`.custom-row[data-key="${key}"]`); if (!row) return;
+    const h = state.mapping[key];
+    const ex = h ? state.records.map(r => r.row[h]).filter(v => String(v).trim() !== '').slice(0, 3).map(String) : [];
+    row.querySelector('.sample').textContent = h ? (ex.length ? 'e.g. ' + ex.join(' · ') : 'column is empty') : '';
+  }
+  function customChanged() { saveCustom(); renderShowList(); saveSession(); }
+  $('#btn-add-custom').addEventListener('click', () => {
+    const used = new Set(Object.values(state.mapping));
+    const free = state.headers.find(h => !used.has(h)) || '';
+    const key = 'c' + Date.now().toString(36);
+    state.custom.push({ key, name: free });
+    if (free) state.mapping[key] = free;
+    state.settings.show[key] = true;
+    renderCustom(); customChanged();
+  });
+  $('#custom-list').addEventListener('input', e => {
+    const row = e.target.closest('.custom-row'); if (!row) return;
+    const c = state.custom.find(x => x.key === row.dataset.key); if (!c) return;
+    if (e.target.dataset.cf === 'name') { c.name = e.target.value; customChanged(); }
+  });
+  $('#custom-list').addEventListener('change', e => {
+    const row = e.target.closest('.custom-row'); if (!row) return;
+    const key = row.dataset.key, c = state.custom.find(x => x.key === key); if (!c) return;
+    if (e.target.dataset.cf === 'column') {
+      const old = state.mapping[key];
+      if (e.target.value) state.mapping[key] = e.target.value; else delete state.mapping[key];
+      // take the column header as name if the name was still the old header or empty
+      if (!c.name || c.name === old) { c.name = e.target.value; row.querySelector('input').value = c.name; }
+      updateCustomSample(key); customChanged();
+    }
+  });
+  $('#custom-list').addEventListener('click', e => {
+    if (e.target.dataset.cf !== 'remove') return;
+    const key = e.target.closest('.custom-row').dataset.key;
+    state.custom = state.custom.filter(x => x.key !== key);
+    delete state.mapping[key];
+    renderCustom(); customChanged();
+  });
   function updateSample(key) {
     const el = $(`.map-row[data-key="${key}"] .sample`);
     const h = state.mapping[key];
@@ -438,6 +512,7 @@
     state.fileName = 'Example data';
     $('#sheet-select-wrap').hidden = true;
     setData(headers, rows);
+    renderShowList();
     if (!$('#s-title').value || state.settings.title === 'Herbarium') { state.settings.title = 'Herbarium Jane Doe'; applySettingsToForm(); }
     renderMapping();
     toast('Example data loaded');
@@ -447,7 +522,7 @@
   function saveSessionNow() {
     if (!state.rows.length) return;
     const ok = saveJSON(LS_SESSION, {
-      fileName: state.fileName, headers: state.headers, rows: state.rows, mapping: state.mapping,
+      fileName: state.fileName, headers: state.headers, rows: state.rows, mapping: state.mapping, custom: state.custom,
       records: state.records.map(r => ({ id: r.id, edit: r.edit, include: r.include })), saved: Date.now()
     });
     if (!ok) console.warn('Session could not be saved (storage full or disabled).');
@@ -462,14 +537,14 @@
     $('#btn-resume').onclick = () => {
       // rows were serialised, so dates come back as ISO strings; formatDate handles that
       state.fileName = s.fileName;
-      state.headers = s.headers; state.rows = s.rows; state.mapping = s.mapping;
+      state.headers = s.headers; state.rows = s.rows; state.mapping = s.mapping; state.custom = s.custom || [];
       state.records = s.rows.map((row, i) => ({ id: i, row, edit: {}, include: true }));
       const byId = Object.fromEntries((s.records || []).map(r => [r.id, r]));
       state.records.forEach(r => { if (byId[r.id]) { r.edit = byId[r.id].edit || {}; r.include = byId[r.id].include !== false; } });
       pruneEmpty();
       state.selected = state.records.length ? 0 : -1;
       $('#sheet-select-wrap').hidden = true;
-      renderMapping(); enableTabs(true); showTab('etiketten');
+      renderMapping(); renderShowList(); enableTabs(true); showTab('etiketten');
       $('#resume').hidden = true;
       toast('Session restored');
     };
@@ -626,10 +701,12 @@
     const form = $('#edit-form');
     if (!rec) { form.innerHTML = ''; $('#edit-title').textContent = 'No specimen selected'; return; }
     $('#edit-title').innerHTML = `Specimen ${esc(text(rec, 'nr') || state.selected + 1)} <span class="pill">${state.selected + 1} / ${state.records.length}</span>`;
-    form.innerHTML = FORM_LAYOUT.map(([k, cls]) => {
+    const layout = FORM_LAYOUT.concat(state.custom.map(c => [c.key, 'half']));
+    form.innerHTML = layout.map(([k, cls]) => {
       let v = k === 'datum' ? formatDate(get(rec, k)) : text(rec, k);
       if ((k === 'lat' || k === 'lon') && v !== '') { const p = parseCoord(v); if (p != null) v = String(p); }
-      return `<label class="${cls}">${esc(FIELD[k].label)}<input type="text" data-k="${k}" value="${esc(v)}"></label>`;
+      const src = k === 'hoehe' && rec.edit._elevSrc ? `<span class="src">source: ${esc(rec.edit._elevSrc)}</span>` : '';
+      return `<label class="${cls}"><span>${esc(fieldLabel(k))}</span><input type="text" data-k="${k}" value="${esc(v)}">${src}</label>`;
     }).join('');
     if (rec.edit._fromText) toastOnce('Coordinates were taken from the locality text');
   }
@@ -640,6 +717,7 @@
     const k = e.target.dataset.k; const rec = state.records[state.selected];
     if (!k || !rec) return;
     rec.edit[k] = e.target.value;
+    if (k === 'hoehe' && rec.edit._elevSrc) { delete rec.edit._elevSrc; const sp = e.target.parentNode.querySelector('.src'); if (sp) sp.remove(); }
     const coord = k === 'lat' || k === 'lon';
     updateListItem(rec); updateCounts(); saveSession();
     if (coord) drawMarkers();
@@ -675,42 +753,160 @@
   $('#search-form').addEventListener('submit', e => { e.preventDefault(); geocode($('#search-input').value); });
   document.addEventListener('click', e => { if (!e.target.closest('#search-results, #search-form, #btn-geocode')) $('#search-results').hidden = true; });
 
-  $('#btn-geocode').addEventListener('click', () => {
+  // ---------------------------------------------------------------- confirmation dialog
+  // options: [{value, label, hint}] shown as radio buttons; resolves with the chosen value or null
+  function confirmAction({ title, text, options = [], ok = 'OK' }) {
+    const d = $('#confirm-dialog');
+    $('#cf-title').textContent = title;
+    $('#cf-text').innerHTML = text;
+    $('#cf-ok').textContent = ok;
+    $('#cf-options').innerHTML = options.map((o, i) => `
+      <label class="cf-opt ${o.disabled ? 'disabled' : ''}"><input type="radio" name="cf" value="${esc(o.value)}" ${i === options.findIndex(x => !x.disabled) ? 'checked' : ''} ${o.disabled ? 'disabled' : ''}>
+        <span><b>${esc(o.label)}</b>${o.hint ? `<small>${esc(o.hint)}</small>` : ''}</span></label>`).join('');
+    $('#cf-ok').disabled = options.length > 0 && options.every(o => o.disabled);
+    return new Promise(resolve => {
+      const done = () => {
+        d.removeEventListener('close', done);
+        if (d.returnValue !== 'ok') return resolve(null);
+        const r = d.querySelector('input[name=cf]:checked');
+        resolve(options.length ? (r ? r.value : null) : true);
+      };
+      d.returnValue = '';
+      d.addEventListener('close', done);
+      d.showModal();
+    });
+  }
+
+  let busy = false;
+  function setBusy(on) { busy = on; $$('#coord-tools button').forEach(b => { b.disabled = on; }); }
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const cleanLocality = t => String(t).replace(/-?\d{1,3}[.,]\d{3,}\s*°?\s*[NSEOW]?/gi, '').replace(/[\s,;]+$/, '').replace(/^[\s,;]+/, '').trim();
+
+  // ---- find locality text on map (Nominatim, max 1 request per second)
+  async function geocodeFirst(q) {
+    const wait = 1100 - (Date.now() - lastGeo); if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    lastGeo = Date.now();
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=${encodeURIComponent(navigator.language || 'en')}&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    return data && data.length ? [+data[0].lat, +data[0].lon] : null;
+  }
+
+  $('#btn-geocode').addEventListener('click', async () => {
+    if (busy) return;
     const rec = state.records[state.selected]; if (!rec) return;
-    const q = text(rec, 'fundort').replace(/-?\d{1,3}\.\d{3,}/g, '').replace(/\s*[,;]\s*$/, '');
-    $('#search-input').value = q; geocode(q);
-  });
-
-  $('#btn-elev').addEventListener('click', async () => {
-    const rec = state.records[state.selected]; const ll = rec && getLatLon(rec);
-    if (!ll) { toast('Set coordinates first'); return; }
+    const withText = state.records.filter(r => cleanLocality(text(r, 'fundort')));
+    const missing = withText.filter(r => !getLatLon(r));
+    const choice = await confirmAction({
+      title: 'Find locality text on map',
+      text: 'Searches the <b>Locality</b> text in OpenStreetMap (Nominatim) and places the specimen at the match. Coordinates written in the text are ignored for the search. Matches are approximate (usually the village or place centre), so it is worth checking the position on the map afterwards.',
+      options: [
+        { value: 'this', label: 'Only this specimen', hint: 'Shows the search results so you can pick the right one.', disabled: !cleanLocality(text(rec, 'fundort')) },
+        { value: 'missing', label: `All specimens without coordinates (${missing.length})`, hint: 'Uses the best match. Existing coordinates are kept.', disabled: !missing.length },
+        { value: 'all', label: `All specimens with a locality (${withText.length})`, hint: 'Uses the best match and overwrites existing coordinates.', disabled: !withText.length }
+      ],
+      ok: 'Search'
+    });
+    if (!choice) return;
+    if (choice === 'this') { const q = cleanLocality(text(rec, 'fundort')); $('#search-input').value = q; geocode(q); return; }
+    const targets = choice === 'missing' ? missing : withText;
+    const groups = new Map();
+    targets.forEach(r => { const q = cleanLocality(text(r, 'fundort')); if (!groups.has(q)) groups.set(q, []); groups.get(q).push(r); });
+    setBusy(true);
+    let done = 0, found = 0, set = 0;
     try {
-      const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ll[0]}&longitude=${ll[1]}`);
-      const d = await res.json();
-      if (d.elevation && d.elevation.length) { rec.edit.hoehe = Math.round(d.elevation[0]); fillForm(); afterEdit(rec, false); toast(`Elevation: ${rec.edit.hoehe} m (from terrain model, please check)`); }
-      else toast('No elevation found');
-    } catch (e) { toast('Elevation service not reachable'); }
+      for (const [q, recs] of groups) {
+        toast(`Searching localities ${++done} / ${groups.size} ...`, 60000);
+        let ll = null;
+        try { ll = await geocodeFirst(q); } catch (e) { ll = null; }
+        if (ll) { found++; recs.forEach(r => { r.edit.lat = Math.round(ll[0] * 1e6) / 1e6; r.edit.lon = Math.round(ll[1] * 1e6) / 1e6; delete r.edit._fromText; set++; updateListItem(r); }); }
+      }
+    } finally { setBusy(false); }
+    drawMarkers(); fillForm(); updateCounts(); saveSession(); fitAll();
+    toast(`Found ${found} of ${groups.size} localities, ${plural(set, 'specimen')} placed on the map.`, 5000);
   });
 
-  $('#btn-copy-same').addEventListener('click', () => {
+  // ---- elevation (Open-Meteo elevation API, Copernicus GLO-90, up to 100 points per request)
+  async function fetchElevations(points) {
+    const out = [];
+    for (let i = 0; i < points.length; i += 100) {
+      const chunk = points.slice(i, i + 100);
+      const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${chunk.map(p => p[0].toFixed(5)).join(',')}&longitude=${chunk.map(p => p[1].toFixed(5)).join(',')}`);
+      const d = await res.json();
+      if (!d.elevation) throw new Error('no data');
+      out.push(...d.elevation);
+    }
+    return out;
+  }
+  $('#btn-elev').addEventListener('click', async () => {
+    if (busy) return;
+    const rec = state.records[state.selected]; if (!rec) return;
+    const withLL = state.records.filter(r => getLatLon(r));
+    const missing = withLL.filter(r => !text(r, 'hoehe'));
+    const choice = await confirmAction({
+      title: 'Get elevation',
+      text: `Looks up the elevation in metres for the coordinates from the terrain model <b>${ELEV_SOURCE}</b> (90 m grid). The source is shown next to the field and exported as an extra column "Elevation source".`,
+      options: [
+        { value: 'this', label: 'Only this specimen', hint: getLatLon(rec) ? (text(rec, 'hoehe') ? 'Overwrites the current value.' : '') : 'This specimen has no coordinates yet.', disabled: !getLatLon(rec) },
+        { value: 'missing', label: `All specimens without elevation (${missing.length})`, hint: 'Only specimens that have coordinates. Existing values are kept.', disabled: !missing.length },
+        { value: 'all', label: `All specimens with coordinates (${withLL.length})`, hint: 'Overwrites existing elevations.', disabled: !withLL.length }
+      ],
+      ok: 'Get elevation'
+    });
+    if (!choice) return;
+    const targets = choice === 'this' ? [rec] : choice === 'missing' ? missing : withLL;
+    setBusy(true); toast('Getting elevation ...', 60000);
+    try {
+      const el = await fetchElevations(targets.map(getLatLon));
+      let n = 0;
+      targets.forEach((r, i) => { if (el[i] != null && isFinite(el[i])) { r.edit.hoehe = Math.round(el[i]); r.edit._elevSrc = ELEV_SOURCE; n++; updateListItem(r); } });
+      fillForm(); updateCounts(); saveSession();
+      toast(choice === 'this' && n ? `Elevation set: ${rec.edit.hoehe} m` : `Elevation set for ${plural(n, 'specimen')}.`);
+    } catch (e) { toast('Elevation service not reachable'); }
+    finally { setBusy(false); }
+  });
+
+  // ---- copy coordinates to specimens with the same locality text
+  $('#btn-copy-same').addEventListener('click', async () => {
+    if (busy) return;
     const rec = state.records[state.selected]; const ll = rec && getLatLon(rec);
-    if (!ll) { toast('This specimen has no coordinates yet'); return; }
+    if (!rec) return;
     const ort = norm(text(rec, 'fundort'));
-    if (!ort) { toast('No locality text to compare'); return; }
-    let n = 0;
-    state.records.forEach(r => {
-      if (r !== rec && norm(text(r, 'fundort')) === ort) {
-        r.edit.lat = ll[0]; r.edit.lon = ll[1];
-        if (text(rec, 'hoehe') && !text(r, 'hoehe')) r.edit.hoehe = text(rec, 'hoehe');
-        n++; updateListItem(r);
-      }
+    const same = ort ? state.records.filter(r => r !== rec && norm(text(r, 'fundort')) === ort) : [];
+    const missing = same.filter(r => !getLatLon(r));
+    const choice = await confirmAction({
+      title: 'Copy coordinates to same locality',
+      text: !ll ? 'This specimen has no coordinates yet. Set them on the map first.'
+        : !ort ? 'This specimen has no locality text to compare.'
+        : `Copies the coordinates${text(rec, 'hoehe') ? ' and the elevation' : ''} of this specimen to the other specimens with exactly the same locality text:<br><i>${esc(text(rec, 'fundort'))}</i>`,
+      options: ll && ort ? [
+        { value: 'missing', label: `Only those without coordinates (${missing.length})`, hint: 'Existing coordinates are kept.', disabled: !missing.length },
+        { value: 'all', label: `All with the same locality (${same.length})`, hint: 'Overwrites their coordinates and elevation.', disabled: !same.length }
+      ] : [{ value: 'x', label: 'Nothing to copy', disabled: true }],
+      ok: 'Copy'
+    });
+    if (!choice) return;
+    const targets = choice === 'missing' ? missing : same;
+    const h = text(rec, 'hoehe');
+    targets.forEach(r => {
+      r.edit.lat = ll[0]; r.edit.lon = ll[1]; delete r.edit._fromText;
+      if (h && (choice === 'all' || !text(r, 'hoehe'))) { r.edit.hoehe = h; if (rec.edit._elevSrc) r.edit._elevSrc = rec.edit._elevSrc; else delete r.edit._elevSrc; }
+      updateListItem(r);
     });
     drawMarkers(); updateCounts(); saveSession();
-    toast(n ? `Copied to ${n} more specimen(s)` : 'No other specimen with the same locality text');
+    toast(`Copied to ${plural(targets.length, 'specimen')}.`);
   });
 
-  $('#btn-clear-coord').addEventListener('click', () => {
+  // ---- clear coordinates
+  $('#btn-clear-coord').addEventListener('click', async () => {
+    if (busy) return;
     const rec = state.records[state.selected]; if (!rec) return;
+    const ok = await confirmAction({
+      title: 'Clear coordinates',
+      text: `Removes latitude and longitude of specimen <b>${esc(text(rec, 'nr') || state.selected + 1)}</b>. The elevation is kept. You can set a new position by clicking on the map.`,
+      ok: 'Clear'
+    });
+    if (!ok) return;
     rec.edit.lat = ''; rec.edit.lon = ''; delete rec.edit._fromText;
     afterEdit(rec, true);
   });
@@ -721,7 +917,9 @@
     $('#s-title').value = s.title; $('#s-subtitle').value = s.subtitle; $('#s-lang').value = TEXT[s.lang] ? s.lang : 'en'; $('#s-datefmt').value = s.datefmt; $('#s-font').value = s.font;
     $('#s-size').value = s.size; $('#s-coordfmt').value = s.coordfmt; $('#s-paper').value = s.paper; $('#s-sort').value = s.sort;
     $('#s-cols').value = s.cols; $('#s-rows').value = s.rows; $('#s-skip').value = s.skip; $('#s-margin').value = s.margin; $('#s-gap').value = s.gap;
-    $$('[data-show]').forEach(cb => { cb.checked = !!s.show[cb.dataset.show]; });
+    renderShowList();
+    $('[data-show="legdet"]').checked = !!s.show.legdet;
+    $('#s-empty').checked = !!s.showEmpty;
     $$('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === s.layout));
     $('#s-frame').value = s.frame;
     $$('[data-bg]').forEach(b => b.classList.toggle('on', b.dataset.bg.toLowerCase() === String(s.bg).toLowerCase()));
@@ -739,12 +937,50 @@
     s.cols = Math.round(num('#s-cols', 1, 4, 2)); s.rows = Math.round(num('#s-rows', 1, 8, 4)); s.skip = Math.round(num('#s-skip', 0, 31, 0));
     s.margin = num('#s-margin', 0, 30, 7); s.gap = num('#s-gap', 0, 20, 4);
     $$('[data-show]').forEach(cb => { s.show[cb.dataset.show] = cb.checked; });
-    s.frame = $('#s-frame').value; s.bg = $('#s-bg').value;
+    s.frame = $('#s-frame').value; s.bg = $('#s-bg').value; s.showEmpty = $('#s-empty').checked;
     saveJSON(LS_SETTINGS, s);
   }
   $('.settings').addEventListener('input', debounce(() => { readSettingsFromForm(); renderPreview(); }, 120));
   $('.settings').addEventListener('change', () => { readSettingsFromForm(); renderPreview(); });
   $('#btn-reset-settings').addEventListener('click', () => { state.settings = clone(DEFAULT_SETTINGS); saveJSON(LS_SETTINGS, state.settings); applySettingsToForm(); renderPreview(); });
+
+  // ---- "Show" list: which body fields are printed and in which order (drag to reorder)
+  function normalizedOrder() {
+    const s = state.settings;
+    const keys = Object.keys(BODY_FIELDS).concat(state.custom.map(c => c.key));
+    let order = (Array.isArray(s.order) ? s.order : []).filter(k => keys.includes(k));
+    keys.forEach(k => { if (!order.includes(k)) order.push(k); });
+    s.order = order;
+    state.custom.forEach(c => { if (!(c.key in s.show)) s.show[c.key] = true; });
+    return order;
+  }
+  function renderShowList() {
+    const s = state.settings;
+    $('#show-list').innerHTML = normalizedOrder().map(k => {
+      const c = state.custom.find(x => x.key === k);
+      const name = c ? (c.name || 'Custom field') : BODY_FIELDS[k];
+      return `<li draggable="true" data-key="${k}"><span class="grip" aria-hidden="true">&#10303;</span>
+        <label><input type="checkbox" data-show="${k}" ${s.show[k] ? 'checked' : ''}> ${esc(name)}${c ? ' <small>(own field)</small>' : ''}</label></li>`;
+    }).join('');
+  }
+  (function initShowDrag() {
+    const ul = $('#show-list'); let dragEl = null;
+    ul.addEventListener('dragstart', e => { dragEl = e.target.closest('li'); if (!dragEl) return; dragEl.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragEl.dataset.key); } catch (x) { /* ignore */ } });
+    ul.addEventListener('dragover', e => {
+      if (!dragEl) return; e.preventDefault();
+      const li = e.target.closest('li'); if (!li || li === dragEl) return;
+      const r = li.getBoundingClientRect();
+      ul.insertBefore(dragEl, e.clientY > r.top + r.height / 2 ? li.nextSibling : li);
+    });
+    const finish = () => {
+      if (!dragEl) return;
+      dragEl.classList.remove('dragging'); dragEl = null;
+      state.settings.order = $$('#show-list li').map(li => li.dataset.key);
+      saveJSON(LS_SETTINGS, state.settings); renderPreview();
+    };
+    ul.addEventListener('drop', e => { e.preventDefault(); finish(); });
+    ul.addEventListener('dragend', finish);
+  })();
 
   function sortedRecords() {
     const list = state.records.filter(r => r.include);
@@ -757,55 +993,77 @@
     return list;
   }
 
+  // one body field of a label: {key, label, html, empty} or null when hidden
+  function bodyField(rec, key, s, T) {
+    let label, val = '';
+    const ll = key === 'coords' ? getLatLon(rec) : null;
+    switch (key) {
+      case 'trivial': label = T.triv; val = esc(text(rec, 'trivial')); break;
+      case 'familie': label = T.fam; val = esc(text(rec, 'familie')); break;
+      case 'fundort': label = T.fundort; val = esc(text(rec, 'fundort')); break;
+      case 'coords':  label = T.coords; val = ll ? `${fmtCoord(ll[0], true, s.coordfmt, T)}, ${fmtCoord(ll[1], false, s.coordfmt, T)}` : ''; break;
+      case 'hoehe':   { label = T.hoehe; const h = text(rec, 'hoehe'); val = h ? `${esc(h.replace(/\s*m$/i, ''))} ${T.m}` : ''; break; }
+      case 'habitat': label = T.habitat; val = esc(text(rec, 'habitat')); break;
+      case 'datum':   label = T.datum; val = esc(labelDate(text(rec, 'datum'), s.datefmt, T)); break;
+      case 'notizen': label = T.bem; val = esc(text(rec, 'notizen')); break;
+      default: {
+        const c = state.custom.find(x => x.key === key); if (!c) return null;
+        label = esc(c.name || ''); val = esc(text(rec, key));
+      }
+    }
+    if (val) return { key, label, html: val };
+    return s.showEmpty ? { key, label, html: '-', empty: true } : null;
+  }
+  function bodyFields(rec, s, T, exclude = []) {
+    return normalizedOrder().filter(k => s.show[k] && !exclude.includes(k)).map(k => bodyField(rec, k, s, T)).filter(Boolean);
+  }
+
   function labelHTML(rec) {
     const s = state.settings, T = TEXT[s.lang] || TEXT.en, show = s.show;
-    const art = text(rec, 'art'), nr = text(rec, 'nr'), fam = show.familie ? text(rec, 'familie') : '', triv = show.trivial ? text(rec, 'trivial') : '';
-    const ort = text(rec, 'fundort'), hab = show.habitat ? text(rec, 'habitat') : '', bem = show.notizen ? text(rec, 'notizen') : '';
-    const hoehe = text(rec, 'hoehe'), leg = text(rec, 'leg'), det = text(rec, 'det');
-    const ll = getLatLon(rec);
+    const art = text(rec, 'art'), nr = text(rec, 'nr'), leg = text(rec, 'leg'), det = text(rec, 'det');
     const name = art ? formatName(art) : '';
-    const coord = show.coords && ll ? `${fmtCoord(ll[0], true, s.coordfmt, T)}, ${fmtCoord(ll[1], false, s.coordfmt, T)}` : '';
-    const elev = show.hoehe && hoehe ? `${esc(hoehe.replace(/\s*m$/i, ''))} ${T.m}` : '';
-    const date = esc(labelDate(text(rec, 'datum'), s.datefmt, T));
-    const ldParts = []; if (show.legdet && leg) ldParts.push(`Leg.: ${esc(leg)}`); if (show.legdet && det) ldParts.push(`Det.: ${esc(det)}`);
+    const ldParts = [];
+    if (show.legdet) {
+      if (leg || s.showEmpty) ldParts.push(`Leg.: ${esc(leg) || '-'}`);
+      if (det || s.showEmpty) ldParts.push(`Det.: ${esc(det) || '-'}`);
+    }
     const legdet = ldParts.join(',&nbsp;&nbsp; ');
     const title = esc(s.title || 'Herbarium'), sub = s.subtitle ? `<small>${esc(s.subtitle)}</small>` : '';
     const nrTag = nr ? `<span class="nr">${T.nr} ${esc(nr)}</span>` : '';
-    const z = (label, val, cls = '') => val ? `<div class="z ${cls}"><b>${label}:</b> ${val}</div>` : '';
-    const p = (val, cls = '') => val ? `<div class="p ${cls}">${val}</div>` : '';
+    const z = f => `<div class="z ${f.key === 'notizen' ? 'bem' : ''}"><b>${f.label}:</b> ${f.html}</div>`;
     let h = `<div class="schild" data-i="${state.records.indexOf(rec)}" title="Click to edit">`;
 
     if (s.layout === 'table') {
-      const kv = (label, val) => val ? `<b>${label}</b><span>${val}</span>` : '';
+      const kv = (label, val) => `<b>${label}</b><span>${val}</span>`;
       h += `<div class="titel">${title}${sub}</div><div class="kv">`;
-      h += kv(T.art, name + (triv ? ` <span class="triv-inline">(${esc(triv)})</span>` : '')) + kv(T.nr.replace(/[.:]$/, ''), esc(nr)) + kv(T.fam, esc(fam));
-      h += kv(T.fundort, esc(ort)) + kv(T.coords, coord) + kv(T.hoehe, elev) + kv(T.habitat, esc(hab)) + kv(T.datum, date) + kv(T.bem, esc(bem));
+      if (name || s.showEmpty) h += kv(T.art, name || '-');
+      if (nr) h += kv(T.nr.replace(/[.:]$/, ''), esc(nr));
+      h += bodyFields(rec, s, T).map(f => kv(f.label, f.html)).join('');
       h += '</div><div class="spacer"></div>';
       if (legdet) h += `<div class="legdet">${legdet}</div>`;
     } else if (s.layout === 'name') {
       h += `<div class="hd"><span>${title}${sub}</span>${nrTag}</div>`;
       h += `<div class="big">${name}</div>`;
-      const subline = [esc(triv), esc(fam)].filter(Boolean).join(' · ');
+      const subline = [show.trivial ? esc(text(rec, 'trivial')) : '', show.familie ? esc(text(rec, 'familie')) : ''].filter(Boolean).join(' · ');
       if (subline) h += `<div class="subline">${subline}</div>`;
       h += '<div class="rule"></div>';
-      h += z(T.fundort, esc(ort)) + z(T.coords, coord) + z(T.hoehe, elev) + z(T.habitat, esc(hab)) + z(T.datum, date) + z(T.bem, esc(bem), 'bem');
+      h += bodyFields(rec, s, T, ['trivial', 'familie']).map(z).join('');
       h += '<div class="spacer"></div>';
       if (legdet) h += `<div class="legdet">${legdet}</div>`;
     } else if (s.layout === 'minimal') {
       h += `<div class="titel min">${title}${sub}</div>`;
       h += `<div class="big left">${name}</div>`;
-      const famline = [esc(fam), esc(triv)].filter(Boolean).join(' · ');
+      const famline = [show.familie ? esc(text(rec, 'familie')) : '', show.trivial ? esc(text(rec, 'trivial')) : ''].filter(Boolean).join(' · ');
       if (famline) h += `<div class="famsc">${famline}</div>`;
-      h += p(esc(ort)) + p([coord, elev].filter(Boolean).join(' · '), 'small') + p(esc(hab)) + p(date) + p(esc(bem), 'it');
+      // minimal has no field names, so empty fields are never printed here
+      h += bodyFields(rec, s, T, ['trivial', 'familie']).filter(f => !f.empty)
+        .map(f => `<div class="p ${f.key === 'coords' || f.key === 'hoehe' ? 'small' : ''} ${f.key === 'notizen' ? 'it' : ''}">${f.html}</div>`).join('');
       h += '<div class="spacer"></div>';
       h += `<div class="foot"><span>${legdet}</span>${nrTag}</div>`;
     } else { // classic
       h += `<div class="titel">${title}${sub}</div>`;
-      h += `<div class="art-zeile"><span>${art ? `<b>${T.art}:</b> ${name}` : ''}</span>${nrTag}</div>`;
-      if (triv) h += `<div class="triv">${esc(triv)}</div>`;
-      h += z(T.fam, esc(fam));
-      h += '<div class="leerzeile"></div>';
-      h += z(T.fundort, esc(ort)) + z(T.coords, coord) + z(T.hoehe, elev) + z(T.habitat, esc(hab)) + z(T.datum, date) + z(T.bem, esc(bem), 'bem');
+      h += `<div class="art-zeile"><span>${art ? `<b>${T.art}:</b> ${name}` : (s.showEmpty ? `<b>${T.art}:</b> -` : '')}</span>${nrTag}</div>`;
+      h += bodyFields(rec, s, T).map(z).join('');
       h += '<div class="spacer"></div>';
       if (legdet) h += `<div class="legdet">${legdet}</div>`;
     }
@@ -835,6 +1093,15 @@
   // warn about labels whose text is cut off
   function markOverflow() {
     requestAnimationFrame(() => {
+      // ruled paper: keep the footer on a ruled line
+      $$('#preview .page.tx-ruled .schild:not(.leer)').forEach(el => {
+        const sp = el.querySelector('.spacer'); if (!sp) return;
+        sp.style.height = '0px';
+        const L = parseFloat(getComputedStyle(el).lineHeight) || 0;
+        const last = el.lastElementChild, cs = getComputedStyle(el);
+        const free = el.clientHeight - parseFloat(cs.paddingBottom) - (last.offsetTop + last.offsetHeight);
+        if (L > 0 && free > 0) sp.style.height = (Math.floor(free / L + 0.02) * L) + 'px';
+      });
       let n = 0;
       $$('#preview .schild:not(.leer)').forEach(el => { const o = el.scrollHeight > el.clientHeight + 1; el.style.outline = o ? '2px solid #d9534f' : ''; if (o) n++; });
       if (n) toast(`${n} label(s) overfull (marked red): use a smaller font or fewer rows per page.`, 4500);
@@ -853,14 +1120,17 @@
     const headers = state.headers.slice();
     const extra = { lat: 'Latitude', lon: 'Longitude', hoehe: 'Elevation' };
     const colFor = {};
-    for (const f of FIELDS) {
+    for (const f of allFields()) {
       if (state.mapping[f.key]) colFor[f.key] = state.mapping[f.key];
       else if (state.records.some(r => r.edit[f.key] !== undefined && String(r.edit[f.key]).trim() !== '')) {
         const name = extra[f.key] || f.label; if (!headers.includes(name)) headers.push(name); colFor[f.key] = name;
       }
     }
+    const hasSrc = state.records.some(r => r.edit._elevSrc);
+    if (hasSrc && !headers.includes('Elevation source')) headers.push('Elevation source');
     const out = state.records.map(rec => {
       const row = Object.assign({}, rec.row);
+      if (hasSrc) row['Elevation source'] = rec.edit._elevSrc || row['Elevation source'] || '';
       for (const [k, col] of Object.entries(colFor)) {
         if (Object.prototype.hasOwnProperty.call(rec.edit, k)) {
           let v = rec.edit[k];

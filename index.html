@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Hans Christian Groß">
+  <meta name="description" content="Create printable herbarium labels from a spreadsheet: map columns, place localities on a map, print. Everything runs locally in your browser.">
+  <title>Herbie · Herbarium labels</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 29V12' stroke='%232f5d3a' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M16 14C9 13 6 7 7 3c6 0 10 4 9 11zM16 19c6-1 9-5 9-10-6 0-9 4-9 10z' fill='%235b8a4f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 29V12" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M16 14C9 13 6 7 7 3c6 0 10 4 9 11zM16 19c6-1 9-5 9-10-6 0-9 4-9 10z" fill="currentColor" opacity=".75"/></svg>
+      <div>
+        <h1>Herbie</h1>
+        <p>Spreadsheet in, herbarium labels out</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="daten" role="tab"><span>1</span> Load table</button>
+      <button class="tab-btn" data-tab="spalten" role="tab" disabled><span>2</span> Columns</button>
+      <button class="tab-btn" data-tab="etiketten" role="tab" disabled><span>3</span> Labels</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 1 LOAD TABLE -->
+    <section id="tab-daten" class="tab active">
+      <div class="narrow">
+        <div class="card">
+          <h2>Load table</h2>
+          <label id="dropzone" class="dropzone">
+            <input type="file" id="file-input" accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv">
+            <strong>Drop an Excel or CSV file here</strong>
+            <span>or click to choose one (.xlsx, .xls, .ods, .csv)</span>
+          </label>
+          <div class="row gap wrap">
+            <button class="btn ghost" id="btn-template">Download empty template</button>
+            <button class="btn ghost" id="btn-demo">Try example data</button>
+          </div>
+          <div id="resume" class="notice" hidden>
+            <span>There is a saved session (<b id="resume-name"></b>).</span>
+            <span class="row gap">
+              <button class="btn small" id="btn-resume">Continue</button>
+              <button class="btn small ghost" id="btn-discard">Discard</button>
+            </span>
+          </div>
+          <p class="hint">Your data never leaves your computer. The file is read in your browser only, nothing is uploaded. Only the map tiles and the optional place search load data from the internet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 COLUMNS -->
+    <section id="tab-spalten" class="tab">
+      <div class="narrow wide">
+        <div class="card">
+          <div class="row between">
+            <h2>Map columns</h2>
+            <span class="pill" id="row-count"></span>
+          </div>
+          <div class="row gap" id="sheet-select-wrap" hidden>
+            <label for="sheet-select">Sheet</label>
+            <select id="sheet-select"></select>
+          </div>
+          <p class="hint">Tell Herbie which column of your table holds which information. Known column names are detected automatically. Unmapped fields stay empty and can be filled in per specimen later.</p>
+          <div id="mapping" class="mapping"></div>
+          <div class="row end gap">
+            <button class="btn ghost" data-goto="daten">Back</button>
+            <button class="btn primary" id="btn-to-labels">Continue to labels</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 LABELS -->
+    <section id="tab-etiketten" class="tab">
+      <div class="label-layout">
+        <aside class="card settings">
+          <div class="data-box">
+            <span id="label-count"></span>
+            <button class="btn small" id="btn-open-data">View / edit data</button>
+          </div>
+          <h2>Label</h2>
+          <label>Label language <select id="s-lang"></select></label>
+          <label>Header <input type="text" id="s-title" placeholder="Herbarium First Last"></label>
+          <label>Subheader (optional) <input type="text" id="s-subtitle" placeholder="e.g. Flora of Hesse"></label>
+          <div class="two">
+            <label>Font
+              <select id="s-font">
+                <option value="'Times New Roman', Times, serif">Times</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                <option value="'Courier New', monospace">Courier</option>
+              </select>
+            </label>
+            <label>Font size (pt) <input type="number" id="s-size" min="6" max="16" step="0.5"></label>
+          </div>
+          <div class="two">
+            <label>Date
+              <select id="s-datefmt">
+                <option value="dmy">12.04.2026</option>
+                <option value="roman">12.IV.2026</option>
+                <option value="iso">2026-04-12</option>
+                <option value="long">12 April 2026</option>
+              </select>
+            </label>
+            <label>Coordinates
+              <select id="s-coordfmt"><option value="dec">50.80912° N</option><option value="dms">50°48'32.8" N</option></select>
+            </label>
+          </div>
+
+          <h2>Design</h2>
+          <div class="field-label">Layout</div>
+          <div class="seg">
+            <button type="button" data-layout="classic">Classic</button>
+            <button type="button" data-layout="table">Table</button>
+            <button type="button" data-layout="name">Name first</button>
+            <button type="button" data-layout="minimal">Minimal</button>
+          </div>
+          <label>Frame
+            <select id="s-frame">
+              <option value="none">No frame</option>
+              <option value="classic">Classic line</option>
+              <option value="thin">Thin line</option>
+              <option value="double">Double line</option>
+              <option value="inset">Inner frame</option>
+              <option value="rounded">Rounded</option>
+              <option value="corners">Corner marks</option>
+              <option value="dashed">Dashed (cut line)</option>
+            </select>
+          </label>
+          <div class="field-label">Background</div>
+          <div class="swatches">
+            <button type="button" data-bg="#ffffff" style="background:#ffffff" title="White"></button>
+            <button type="button" data-bg="#fbf6e9" style="background:#fbf6e9" title="Cream"></button>
+            <button type="button" data-bg="#f3ead8" style="background:#f3ead8" title="Sand"></button>
+            <button type="button" data-bg="#eef3e6" style="background:#eef3e6" title="Sage"></button>
+            <button type="button" data-bg="#e6f1ec" style="background:#e6f1ec" title="Mint"></button>
+            <button type="button" data-bg="#e8f0f7" style="background:#e8f0f7" title="Sky"></button>
+            <button type="button" data-bg="#f0ecf6" style="background:#f0ecf6" title="Lavender"></button>
+            <button type="button" data-bg="#f8eaea" style="background:#f8eaea" title="Rose"></button>
+            <label class="custom-color" title="Custom colour"><input type="color" id="s-bg" value="#ffffff"></label>
+          </div>
+
+          <div class="field-label">Texture</div>
+          <div class="textures">
+            <button type="button" class="tex-tile" data-tex="none"><span>None</span></button>
+            <button type="button" class="tex-tile tx-paper" data-tex="paper"><span>Paper</span></button>
+            <button type="button" class="tex-tile tx-parchment" data-tex="parchment"><span>Parchment</span></button>
+            <button type="button" class="tex-tile tx-linen" data-tex="linen"><span>Linen</span></button>
+            <button type="button" class="tex-tile tx-leaves" data-tex="leaves"><span>Leaves</span></button>
+            <button type="button" class="tex-tile tx-dots" data-tex="dots"><span>Dots</span></button>
+            <button type="button" class="tex-tile tx-ruled" data-tex="ruled"><span>Ruled</span></button>
+            <button type="button" class="tex-tile tx-grid" data-tex="grid"><span>Grid</span></button>
+            <button type="button" class="tex-tile tx-hatch" data-tex="hatch"><span>Hatch</span></button>
+          </div>
+
+          <fieldset>
+            <legend>Show</legend>
+            <div class="checks">
+              <label><input type="checkbox" data-show="trivial"> Common name</label>
+              <label><input type="checkbox" data-show="familie"> Family</label>
+              <label><input type="checkbox" data-show="coords"> Coordinates</label>
+              <label><input type="checkbox" data-show="hoehe"> Elevation</label>
+              <label><input type="checkbox" data-show="habitat"> Habitat</label>
+              <label><input type="checkbox" data-show="notizen"> Notes</label>
+              <label><input type="checkbox" data-show="legdet"> Leg. / Det.</label>
+            </div>
+          </fieldset>
+
+          <h2>Page</h2>
+          <div class="two">
+            <label>Paper
+              <select id="s-paper"><option value="A4">A4</option><option value="Letter">US Letter</option></select>
+            </label>
+            <label>Sort
+              <select id="s-sort">
+                <option value="none">as in table</option>
+                <option value="nr">specimen no.</option>
+                <option value="art">scientific name</option>
+                <option value="familie">family, name</option>
+                <option value="datum">date</option>
+              </select>
+            </label>
+          </div>
+          <div class="three">
+            <label>Columns <input type="number" id="s-cols" min="1" max="4"></label>
+            <label>Rows <input type="number" id="s-rows" min="1" max="8"></label>
+            <label>Skip <input type="number" id="s-skip" min="0" max="31" title="Skip labels already used on the first sheet"></label>
+          </div>
+          <div class="two">
+            <label>Page margin (mm) <input type="number" id="s-margin" min="0" max="30" step="0.5"></label>
+            <label>Gap (mm) <input type="number" id="s-gap" min="0" max="20" step="0.5"></label>
+          </div>
+          <button class="link" id="btn-reset-settings">Reset settings</button>
+
+          <div class="actions">
+            <button class="btn primary" id="btn-print">Print / PDF</button>
+            <button class="btn ghost" id="btn-export">Export table</button>
+            <p class="hint">Click a label to edit it. In the print dialog: margins "None", scale 100 %, headers and footers off.</p>
+          </div>
+        </aside>
+
+        <div class="preview-col">
+          <div id="preview" class="preview"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    © Hans Christian Groß · <a href="https://github.com/ChristianG4/Herbie" id="repo-link">Source on GitHub</a> · MIT License
+  </footer>
+
+  <!-- DATA DIALOG: table, map and editor -->
+  <dialog id="data-dialog" class="data-dialog">
+    <div class="dlg-head">
+      <h2>Specimen data</h2>
+      <span class="pill" id="coord-count"></span>
+      <span class="spacer"></span>
+      <button class="btn primary small" id="btn-close-data">Done</button>
+    </div>
+    <div class="dlg-body">
+      <div class="table-pane">
+        <div class="row gap wrap table-tools">
+          <input type="search" id="list-filter" placeholder="Filter by name, number, locality ...">
+          <label class="small-text"><input type="checkbox" id="filter-missing"> only without coordinates</label>
+          <span class="spacer"></span>
+          <button class="link" id="btn-all-on">all on</button>
+          <button class="link" id="btn-all-off">all off</button>
+        </div>
+        <div class="table-scroll">
+          <table id="record-table" class="record-table">
+            <thead><tr><th title="Print a label">Print</th><th>No.</th><th>Scientific name</th><th>Date</th><th>Locality</th><th title="Has coordinates">Map</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="edit-pane">
+        <form id="search-form" class="search-row">
+          <input type="search" id="search-input" placeholder="Search a place, e.g. Lahnberge Marburg">
+          <button class="btn" type="submit">Search</button>
+        </form>
+        <div class="map-wrap">
+          <ul id="search-results" class="search-results" hidden></ul>
+          <div id="map"></div>
+        </div>
+        <p class="hint">Click on the map to set the locality of the selected specimen. The marker can be dragged.</p>
+
+        <div class="row between edit-head">
+          <h3 id="edit-title">No specimen selected</h3>
+          <div class="row gap">
+            <button class="btn small ghost" id="btn-prev" title="Previous specimen">&#8592;</button>
+            <button class="btn small ghost" id="btn-next" title="Next specimen">&#8594;</button>
+          </div>
+        </div>
+        <form id="edit-form" class="edit-form"></form>
+        <div class="row gap wrap">
+          <button class="btn small" id="btn-geocode">Find locality text on map</button>
+          <button class="btn small" id="btn-elev">Get elevation</button>
+          <button class="btn small ghost" id="btn-copy-same">Copy coordinates to same locality</button>
+          <button class="btn small ghost" id="btn-clear-coord">Clear coordinates</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

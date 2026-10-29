@@ -1,10 +1,22 @@
 <p align="center"><img src="assets/logo_herbie.png" alt="Herbie" width="360"></p>
 
-Create printable herbarium labels from a spreadsheet, right in your browser.
+<p align="center"><i>Schedae ad Floram exsiccatam</i></p>
 
-**Load table → map columns → check labels, edit data and localities → print.**
+<h3 align="center">Herbarium labels have never been this easy.</h3>
 
-**Open the tool: https://christiang4.github.io/Herbie/**
+<p align="center">Turn your collection spreadsheet into beautiful, print-ready herbarium labels in minutes. No installation, no account, and your data never leaves your browser.</p>
+
+**Pin every find exactly.** Set the precise locality of each specimen with a click on the map, search places by name, or let Herbie look up all localities and elevations at once.
+
+**Make the labels yours, if you like.** Choose from different layouts, frames, colours and paper textures, pick the label language and decide which fields are printed and in which order. Or simply keep the defaults.
+
+**Three steps, that's it:**
+
+1. **Load** your Excel or CSV table
+2. **Choose** what to print
+3. **Print** and put the labels on your sheets
+
+<p align="center"><b><a href="https://christiang4.github.io/Herbie/">Open Herbie: christiang4.github.io/Herbie</a></b></p>
 
 ![Screenshot](docs/screenshot.png)
 

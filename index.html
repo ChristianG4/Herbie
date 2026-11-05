@@ -95,7 +95,7 @@
           <label>Label language <select id="s-lang"></select></label>
           <label>Header <input type="text" id="s-title" placeholder="Herbarium First Last"></label>
           <label>Subheader (optional) <input type="text" id="s-subtitle" placeholder="e.g. Flora of Hesse"></label>
-          <div class="two">
+          <div class="two preset-only">
             <label>Font
               <select id="s-font">
                 <option value="'Times New Roman', Times, serif">Times</option>
@@ -122,15 +122,9 @@
             </select>
           </label>
 
-          <fieldset>
-            <legend>Fields on the label</legend>
-            <p class="hint tiny">Tick to print, drag to change the order.</p>
-            <ul id="show-list" class="show-list"></ul>
-            <label class="inline"><input type="checkbox" data-show="legdet"> Leg. / Det.</label>
-            <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash
-              <span class="info-i" tabindex="0" data-tip='Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". The Minimal layout has no field names and always leaves empty fields out.'>i</span>
-            </label>
-          </fieldset>
+          <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash
+            <span class="info-i" tabindex="0" data-tip='Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". Fields shown as values only always leave empty fields out.'>i</span>
+          </label>
 
           <h2>Design</h2>
           <div class="field-label">Layout</div>
@@ -141,6 +135,7 @@
             <button type="button" data-layout="minimal">Minimal</button>
             <button type="button" data-layout="custom" class="wide" hidden>My design</button>
           </div>
+          <div class="preset-only">
           <label>Frame
             <select id="s-frame">
               <option value="none">No frame</option>
@@ -178,6 +173,8 @@
             <button type="button" class="tex-tile tx-grid" data-tex="grid"><span>Grid</span></button>
             <button type="button" class="tex-tile tx-hatch" data-tex="hatch"><span>Hatch</span></button>
           </div>
+          </div>
+          <p class="hint tiny own-only">Font, frame, background and texture of your own design are set in the designer.</p>
 
           <div class="design-box">
             <button type="button" class="btn small" id="btn-design">Create design</button>
@@ -297,24 +294,65 @@
       <button class="btn small primary" id="dg-apply">Use this design</button>
     </div>
     <div class="dg-body">
-      <aside class="dg-left" id="dg-blocks">
-        <h3>Blocks</h3>
-        <p class="hint tiny">Click to add, or drag onto the label.</p>
-        <button type="button" class="dg-add" draggable="true" data-add="header">Header</button>
-        <button type="button" class="dg-add" draggable="true" data-add="name">Scientific name</button>
-        <button type="button" class="dg-add" draggable="true" data-add="nr">Specimen no.</button>
-        <button type="button" class="dg-add" draggable="true" data-add="fields">Field list</button>
-        <div class="dg-field">
-          <button type="button" class="dg-add" draggable="true" data-add="field">Single field:</button>
-          <select id="dg-field-add" aria-label="Field to add"></select>
+      <aside class="dg-left">
+        <div id="dg-blocks" class="dg-blocks">
+          <h3>Blocks</h3>
+          <p class="hint tiny">Drag a block onto the label.</p>
+          <div class="dg-add" draggable="true" data-add="header">Header</div>
+          <div class="dg-add" draggable="true" data-add="name">Scientific name</div>
+          <div class="dg-add" draggable="true" data-add="nr">Specimen no.</div>
+          <div class="dg-add" draggable="true" data-add="fields">Fields</div>
+          <div class="dg-add" draggable="true" data-add="legdet">Leg. / Det.</div>
+          <div class="dg-add" draggable="true" data-add="text">Free text</div>
+          <div class="dg-add" draggable="true" data-add="line">Line</div>
+          <div class="dg-add" draggable="true" data-add="blank">Empty field</div>
+          <label class="dg-add dg-img">+ Image or logo<input type="file" id="dg-img-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
         </div>
-        <button type="button" class="dg-add" draggable="true" data-add="legdet">Leg. / Det.</button>
-        <button type="button" class="dg-add" draggable="true" data-add="text">Free text</button>
-        <button type="button" class="dg-add" draggable="true" data-add="line">Line</button>
-        <button type="button" class="dg-add" draggable="true" data-add="blank">Empty line</button>
-        <button type="button" class="dg-add" draggable="true" data-add="space">Flexible space</button>
-        <label class="dg-add dg-img">Image or logo<input type="file" id="dg-img-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
-        <p class="hint tiny">Frame, background, texture and font are set in the sidebar and saved with an exported design.</p>
+        <div id="dg-look" class="dg-look">
+          <h3>Style</h3>
+          <div class="two">
+            <label>Font
+              <select id="dg-font">
+                <option value="'Times New Roman', Times, serif">Times</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                <option value="'Courier New', monospace">Courier</option>
+              </select>
+            </label>
+            <label>Size (pt) <input type="number" id="dg-size" min="5" max="30" step="0.5"></label>
+          </div>
+          <label>Frame
+            <select id="dg-frame">
+              <option value="none">No frame</option>
+              <option value="classic">Classic line</option>
+              <option value="thin">Thin line</option>
+              <option value="double">Double line</option>
+              <option value="inset">Inner frame</option>
+              <option value="rounded">Rounded</option>
+              <option value="corners">Corner marks</option>
+              <option value="dashed">Dashed (cut line)</option>
+            </select>
+          </label>
+          <div class="field-label">Background</div>
+          <div class="swatches small" id="dg-swatches">
+            <button type="button" data-dbg="#ffffff" style="background:#ffffff" title="White"></button>
+            <button type="button" data-dbg="#fbf6e9" style="background:#fbf6e9" title="Cream"></button>
+            <button type="button" data-dbg="#f3ead8" style="background:#f3ead8" title="Sand"></button>
+            <button type="button" data-dbg="#eef3e6" style="background:#eef3e6" title="Sage"></button>
+            <button type="button" data-dbg="#e6f1ec" style="background:#e6f1ec" title="Mint"></button>
+            <button type="button" data-dbg="#e8f0f7" style="background:#e8f0f7" title="Sky"></button>
+            <button type="button" data-dbg="#f0ecf6" style="background:#f0ecf6" title="Lavender"></button>
+            <button type="button" data-dbg="#f8eaea" style="background:#f8eaea" title="Rose"></button>
+            <label class="custom-color" title="Custom colour"><input type="color" id="dg-bg" value="#ffffff"></label>
+          </div>
+          <label>Texture
+            <select id="dg-tex">
+              <option value="none">None</option><option value="paper">Paper</option><option value="parchment">Parchment</option>
+              <option value="linen">Linen</option><option value="leaves">Leaves</option><option value="dots">Dots</option>
+              <option value="ruled">Ruled</option><option value="grid">Grid</option><option value="hatch">Hatch</option>
+            </select>
+          </label>
+        </div>
       </aside>
       <div class="dg-center">
         <div class="dg-stage" id="dg-stage"></div>
@@ -322,6 +360,7 @@
           <button class="btn small ghost" id="dg-prev" title="Previous specimen">&#8592;</button>
           <span id="dg-rec"></span>
           <button class="btn small ghost" id="dg-next" title="Next specimen">&#8594;</button>
+          <label class="dg-guides"><input type="checkbox" id="dg-guides" checked> Show guides</label>
         </div>
       </div>
       <aside class="dg-right" id="dg-props"></aside>
@@ -344,6 +383,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="app.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/labels.js"></script>
+  <script src="js/designer.js"></script>
 </body>
 </html>

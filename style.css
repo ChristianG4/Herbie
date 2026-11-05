@@ -254,14 +254,17 @@ legend { font-size: .82rem; color: var(--muted); padding: 0 4px; }
 .schild .legdet { border-top: 1px solid #999; padding-top: 2px; margin-top: 2px; }
 
 /* label designs: rows of blocks */
-.drow { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.drow { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.drow.pin-first { margin-top: auto !important; }
 .drow.empty { display: none; }
-.drow.spacer { flex: 1; }
 .drow.la-dark { border-top: 1px solid #000; padding-top: 2px; margin-top: 2px; }
 .drow.la-light { border-top: 1px solid #999; padding-top: 2px; margin-top: 2px; }
 .drow.lb-dark { border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
 .drow.lb-light { border-bottom: 1px solid #999; padding-bottom: 2px; margin-bottom: 3px; }
-.dcell { flex: 1 1 0; min-width: 0; }
+.dcell { flex: 1 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-start; }
+.dcell.va-middle { justify-content: center; }
+.dcell.va-bottom { justify-content: flex-end; }
+.cin { min-width: 0; }
 .dcell.w-auto { flex: 0 0 auto; white-space: nowrap; }
 .dcell.b { font-weight: bold; }
 .dcell.it { font-style: italic; }
@@ -271,7 +274,9 @@ legend { font-size: .82rem; color: var(--muted); padding: 0 4px; }
 .dcell small { display: block; font-weight: normal; font-size: .9em; text-transform: none; letter-spacing: 0; }
 .dcell .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 8px; row-gap: 1px; }
 .dcell .z, .dcell .p { margin-bottom: 1px; }
-.dline { border-top: 1px solid #000; margin: 4px auto 5px; }
+.dline { border-top: 1px solid currentColor; margin: 4px auto 5px; }
+.dline.al-left { margin-left: 0; margin-right: auto; }
+.dline.al-right { margin-left: auto; margin-right: 0; }
 .t-line { align-self: center; }
 .dimg { position: absolute; z-index: 2; height: auto; pointer-events: none; }
 .dimg.behind { z-index: 0; }
@@ -292,7 +297,8 @@ legend { font-size: .82rem; color: var(--muted); padding: 0 4px; }
 .tx-ruled .schild { padding: 6px 8px !important; line-height: var(--lh); }
 .tx-ruled .schild * { line-height: var(--lh); }
 .tx-ruled .schild .z, .tx-ruled .schild .p { margin: 0; }
-.tx-ruled .drow { border: 0 !important; padding: 0 !important; margin: 0 !important; }
+.tx-ruled .drow { border: 0 !important; padding: 0 !important; margin-bottom: 0 !important; }
+.tx-ruled .drow:not(.pin-first) { margin-top: 0 !important; }
 .tx-ruled .dcell.bigcell { margin: 0; line-height: calc(var(--lh) * 2); }
 .tx-ruled .dline { margin: calc(var(--lh) / 2 - 1px) auto; }
 .tx-ruled .kv { row-gap: 0; }
@@ -367,7 +373,6 @@ legend { font-size: .82rem; color: var(--muted); padding: 0 4px; }
 .schild.editing .dcell.dragging { opacity: .4; }
 .schild.editing .dcell.drop-l { box-shadow: inset 3px 0 0 var(--accent); }
 .schild.editing .dcell.drop-r { box-shadow: inset -3px 0 0 var(--accent); }
-.schild.editing .drow.spacer { min-height: 1.2em; }
 .schild.editing .dz { height: 4px; margin: 0 -2px; border-radius: 2px; position: relative; z-index: 3; }
 .is-dragging .schild.editing .dz { height: 9px; background: repeating-linear-gradient(90deg, rgba(181,128,47,.45) 0 6px, transparent 6px 10px); background-size: 100% 1px; background-repeat: no-repeat; background-position: center; }
 .schild.editing .dz.on { background: var(--accent) !important; background-size: 100% 3px !important; }
@@ -381,6 +386,35 @@ legend { font-size: .82rem; color: var(--muted); padding: 0 4px; }
   background: linear-gradient(var(--accent), var(--accent)) center / 2px 70% no-repeat; opacity: .35; }
 .schild.editing .rs:hover { opacity: 1; }
 .dg-width { font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+
+/* designer v2 */
+.schild.editing .rh { position: absolute; left: 0; right: 0; bottom: -4px; height: 8px; cursor: row-resize; z-index: 5;
+  background: linear-gradient(var(--accent), var(--accent)) center / 40% 2px no-repeat; opacity: .35; }
+.schild.editing .rh:hover { opacity: 1; }
+.dg-stage.noguides .schild.editing .dcell { outline-color: transparent; }
+.dg-stage.noguides .schild.editing .dcell.sel { outline: 1px solid rgba(74,116,81,.5); }
+.dg-stage.noguides .schild.editing .rs, .dg-stage.noguides .schild.editing .rh { opacity: 0; }
+.dg-stage.noguides .schild.editing .rs:hover, .dg-stage.noguides .schild.editing .rh:hover { opacity: .8; }
+.dg-stage.noguides .schild.editing .ph { visibility: hidden; }
+.dg-guides { display: inline-flex; align-items: center; gap: 6px; margin-left: 18px; color: var(--ink); }
+.dg-blocks, .dg-look { display: flex; flex-direction: column; gap: 6px; }
+.dg-look { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.dg-look label { display: flex; flex-direction: column; gap: 3px; font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+.dg-look select, .dg-look input[type=number] { padding: 5px 7px; font-size: .85rem; }
+.swatches.small { gap: 4px; margin-bottom: 6px; }
+.swatches.small button, .swatches.small .custom-color { width: 20px; height: 20px; }
+.dg-right .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dg-right input[type=number] { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+.dg-fl-head { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+.dg-keys { list-style: none; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: #fff; max-height: 240px; overflow-y: auto; }
+.dg-keys li { display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-bottom: 1px solid var(--line); font-size: .84rem; cursor: grab; }
+.dg-keys li:last-child { border-bottom: 0; }
+.dg-keys li.dragging { opacity: .5; background: var(--green-soft); }
+.dg-keys .grip { color: #a9a08a; }
+.dg-keys label { flex-direction: row !important; align-items: center; gap: 6px; margin: 0 !important; color: var(--ink) !important; font-size: .84rem !important; }
+.dg-keys small { color: var(--muted); }
+.dg-addcol { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin-bottom: 4px; }
+.dg-addcol input { padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; font: inherit; font-size: .84rem; }
 
 /* Toast */
 .toast {

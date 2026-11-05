@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/logo-small.png">
   <link rel="apple-touch-icon" href="assets/logo-small.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=1.8">
+  <link rel="stylesheet" href="style.css?v=1.9">
 </head>
 <body>
   <header class="app-header">
@@ -21,9 +21,13 @@
       </div>
     </div>
     <nav class="tabs" role="tablist">
-      <button class="tab-btn active" data-tab="daten" role="tab"><span>1</span> Load table</button>
-      <button class="tab-btn" data-tab="spalten" role="tab" disabled><span>2</span> Columns</button>
-      <button class="tab-btn" data-tab="etiketten" role="tab" disabled><span>3</span> Labels</button>
+      <button class="tab-btn active" data-tab="daten" role="tab">Load table</button>
+      <span class="tab-sep" aria-hidden="true">&#8594;</span>
+      <button class="tab-btn" data-tab="spalten" role="tab" disabled>Columns</button>
+      <span class="tab-sep" aria-hidden="true">&#8594;</span>
+      <button class="tab-btn" data-tab="etiketten" role="tab" disabled>Labels</button>
+      <span class="tab-sep bar" aria-hidden="true">|</span>
+      <button class="tab-btn" data-tab="data" role="tab" disabled>Data</button>
     </nav>
   </header>
 
@@ -41,7 +45,10 @@
           <div class="row gap wrap">
             <button class="btn ghost" id="btn-template">Download empty template</button>
             <button class="btn ghost" id="btn-demo">Try example data</button>
+            <button class="btn ghost" id="btn-import-design-1">Import design</button>
+            <input type="file" id="design-file" accept=".json,application/json" hidden>
           </div>
+          <p class="hint tiny" id="design-list-1" hidden></p>
           <div id="resume" class="notice" hidden>
             <span>There is a saved session (<b id="resume-name"></b>).</span>
             <span class="row gap">
@@ -91,6 +98,19 @@
             <button class="btn small" id="btn-open-data">View / edit data</button>
           </div>
 
+          <h2>Layout</h2>
+          <div class="seg">
+            <button type="button" data-layout="classic">Classic</button>
+            <button type="button" data-layout="table">Table</button>
+            <button type="button" data-layout="name">Name first</button>
+            <button type="button" data-layout="minimal">Minimal</button>
+            <span id="own-layouts" class="own-layouts"></span>
+          </div>
+          <div class="design-box">
+            <button type="button" class="btn small" id="btn-design">Create design</button>
+            <button type="button" class="btn small ghost" id="btn-import-design">Import design</button>
+          </div>
+
           <div class="preset-only">
           <h2>Label</h2>
           <label>Label language <select id="s-lang"></select></label>
@@ -126,18 +146,8 @@
           <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash
             <span class="info-i" tabindex="0" data-tip='Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". Fields shown as values only always leave empty fields out.'>i</span>
           </label>
-          </div>
 
           <h2>Design</h2>
-          <div class="field-label">Layout</div>
-          <div class="seg">
-            <button type="button" data-layout="classic">Classic</button>
-            <button type="button" data-layout="table">Table</button>
-            <button type="button" data-layout="name">Name first</button>
-            <button type="button" data-layout="minimal">Minimal</button>
-            <button type="button" data-layout="custom" class="wide" hidden>My design</button>
-          </div>
-          <div class="preset-only">
           <label>Frame
             <select id="s-frame">
               <option value="none">No frame</option>
@@ -173,15 +183,7 @@
             <button type="button" class="tex-tile tx-grid" data-tex="grid"><span>Grid</span></button>
             <button type="button" class="tex-tile tx-hatch" data-tex="hatch"><span>Hatch</span></button>
           </div>
-          </div>
-          <p class="hint tiny own-only">Language, header, subheader, date and coordinate format, font, frame, background and texture of your own design are set in the designer and saved with it.</p>
-
-          <div class="design-box">
-            <button type="button" class="btn small" id="btn-design">Create design</button>
-            <button type="button" class="btn small ghost" id="btn-import-design">Import design</button>
-            <input type="file" id="design-file" accept=".json,application/json" hidden>
-          </div>
-
+          
           <h2>Page</h2>
           <div class="two">
             <label>Paper
@@ -206,6 +208,7 @@
             <label>Gap (mm) <input type="number" id="s-gap" min="0" max="20" step="0.5"></label>
           </div>
           <button class="link" id="btn-reset-settings">Reset settings</button>
+          </div>
 
           <div class="actions">
             <button class="btn primary" id="btn-print">Print / PDF</button>
@@ -219,19 +222,14 @@
         </div>
       </div>
     </section>
-  </main>
-
-  <footer class="app-footer">
-    © Hans Christian Groß · <a href="https://github.com/ChristianG4/Herbie" id="repo-link">Source on GitHub</a> · MIT License
-  </footer>
-
-  <!-- DATA DIALOG: table, map and editor -->
-  <dialog id="data-dialog" class="data-dialog">
+    <!-- 4 DATA: table, map and editor -->
+    <section id="tab-data" class="tab">
+    <div class="data-page card" id="data-page">
     <div class="dlg-head">
       <h2>Specimen data</h2>
       <span class="pill" id="coord-count"></span>
       <span class="spacer"></span>
-      <button class="btn primary small" id="btn-close-data">Done</button>
+      <button class="btn primary small" id="btn-close-data">To the labels</button>
     </div>
     <div class="dlg-body">
       <div class="table-pane">
@@ -272,7 +270,14 @@
         <form id="edit-form" class="edit-form"></form>
       </div>
     </div>
-  </dialog>
+    </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    © Hans Christian Groß · <a href="https://github.com/ChristianG4/Herbie" id="repo-link">Source on GitHub</a> · MIT License
+  </footer>
 
   <!-- LABEL DESIGNER -->
   <dialog id="design-dialog" class="design-dialog">
@@ -295,6 +300,7 @@
     </div>
     <div class="dg-body">
       <aside class="dg-left">
+        <label class="dg-guides dg-guides-top"><input type="checkbox" id="dg-guides"> Show guides</label>
         <div id="dg-blocks" class="dg-blocks">
           <h3>Blocks</h3>
           <p class="hint tiny">Drag a block onto the label.</p>
@@ -360,7 +366,22 @@
               <option value="ruled">Ruled</option><option value="grid">Grid</option><option value="hatch">Hatch</option>
             </select>
           </label>
-          <label class="dg-guides"><input type="checkbox" id="dg-guides" checked> Show guides</label>
+        </div>
+        <div id="dg-pageset" class="dg-look">
+          <h3>Page</h3>
+          <div class="two">
+            <label>Paper <select id="dg-paper"></select></label>
+            <label>Sort <select id="dg-sort"></select></label>
+          </div>
+          <div class="two">
+            <label>Columns <input type="number" id="dg-cols" min="1" max="4"></label>
+            <label>Rows <input type="number" id="dg-rows" min="1" max="8"></label>
+          </div>
+          <div class="two">
+            <label>Page margin (mm) <input type="number" id="dg-margin" min="0" max="30" step="0.5"></label>
+            <label>Gap (mm) <input type="number" id="dg-gap" min="0" max="20" step="0.5"></label>
+          </div>
+          <button type="button" class="link" id="dg-reset">Reset settings</button>
         </div>
       </aside>
       <div class="dg-center">
@@ -391,10 +412,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/core.js?v=1.8"></script>
-  <script src="js/data.js?v=1.8"></script>
-  <script src="js/editor.js?v=1.8"></script>
-  <script src="js/labels.js?v=1.8"></script>
-  <script src="js/designer.js?v=1.8"></script>
+  <script src="js/core.js?v=1.9"></script>
+  <script src="js/data.js?v=1.9"></script>
+  <script src="js/editor.js?v=1.9"></script>
+  <script src="js/labels.js?v=1.9"></script>
+  <script src="js/designer.js?v=1.9"></script>
 </body>
 </html>

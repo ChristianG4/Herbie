@@ -44,10 +44,12 @@ const BODY_FIELDS = { trivial: 'Common name', familie: 'Family', fundort: 'Local
 const DEFAULT_SETTINGS = {
   title: 'Herbarium', subtitle: '', lang: 'en', datefmt: 'dmy', font: "'Times New Roman', Times, serif", size: 10, coordfmt: 'dec',
   showEmpty: false,
-  layout: 'classic', customDesign: null, frame: 'classic', bg: '#ffffff', texture: 'none',
+  layout: 'classic', designs: [], frame: 'classic', bg: '#ffffff', texture: 'none',
   paper: 'A4', sort: 'none', cols: 2, rows: 4, margin: 7, gap: 4
 };
 const PAPER = { A4: [210, 297], Letter: [215.9, 279.4] };
+const MAX_DESIGNS = 5;
+const PAGE_KEYS = ['paper', 'sort', 'cols', 'rows', 'margin', 'gap'];
 const ELEV_SOURCE = 'Copernicus GLO-90 via Open-Meteo';
 
 const LS_SETTINGS = 'herbar.settings.v1';
@@ -75,6 +77,10 @@ state.settings = (function loadSettings() {
   if (s.datefmt === 'roman') s.datefmt = 'dmy';             // removed in 1.1
   if (s.texture === 'parchment') s.texture = 'paper';        // removed in 1.1
   if (s.texture === 'leaves') s.texture = 'none';            // removed in 1.1
+  // up to 5 own designs (before 1.2 there was only one); layout "own:N" uses design N
+  if (s.customDesign) { s.designs = [s.customDesign]; if (s.layout === 'custom') s.layout = 'own:0'; }
+  delete s.customDesign;
+  if (!Array.isArray(s.designs)) s.designs = [];
   return s;
 })();
 
@@ -119,10 +125,12 @@ function toast(msg, ms = 2600) {
   document.addEventListener('scroll', hide, true);
 })();
 
-// simple confirmation dialog, resolves true or false
-function confirmBox(title, html, ok = 'OK') {
+// simple confirmation dialog, resolves true or false; alertBox shows a message with OK only
+function alertBox(title, html) { return confirmBox(title, html, 'OK', true); }
+function confirmBox(title, html, ok = 'OK', noCancel = false) {
   const d = $('#confirm-dialog');
   $('#cf-title').textContent = title; $('#cf-text').innerHTML = html; $('#cf-ok').textContent = ok;
+  d.querySelector('[value="cancel"]').hidden = noCancel;
   return new Promise(resolve => {
     const done = () => { d.removeEventListener('close', done); resolve(d.returnValue === 'ok'); };
     d.returnValue = ''; d.addEventListener('close', done); d.showModal();

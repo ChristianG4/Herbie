@@ -5,17 +5,17 @@
 
 // ================================================================ 3: label settings
 function applySettingsToForm() {
-  const s = state.settings, own = s.layout === 'custom' && !!s.customDesign;
+  const s = state.settings, own = !!ownDesign();
   $('#s-title').value = s.title; $('#s-subtitle').value = s.subtitle; $('#s-lang').value = TEXT[s.lang] ? s.lang : 'en';
   $('#s-datefmt').value = s.datefmt; $('#s-font').value = s.font; $('#s-size').value = s.size; $('#s-coordfmt').value = s.coordfmt;
   $('#s-paper').value = s.paper; $('#s-sort').value = s.sort;
   $('#s-cols').value = s.cols; $('#s-rows').value = s.rows; $('#s-margin').value = s.margin; $('#s-gap').value = s.gap;
   $('#s-empty').checked = !!s.showEmpty;
-  const cb = $('[data-layout="custom"]');
-  cb.hidden = !s.customDesign;
-  if (s.customDesign) cb.textContent = s.customDesign.name || 'My design';
+  // own designs (up to MAX_DESIGNS) appear next to the ready-made layouts; the cross removes one
+  $('#own-layouts').innerHTML = s.designs.map((d, i) => `<span class="own-btn"><button type="button" data-layout="own:${i}">${esc(d.name || 'My design')}</button><button type="button" class="own-del" data-deldesign="${i}" title="Remove this design">&#10005;</button></span>`).join('');
   $$('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === s.layout));
-  // font, frame, background and texture belong to an own design and are set in the designer
+  $('#btn-design').textContent = own ? 'Edit design' : 'Create design';
+  // label, look and page settings of an own design are set in the designer
   $$('.preset-only').forEach(el => { el.hidden = own; });
   $$('.own-only').forEach(el => { el.hidden = !own; });
   $('#s-frame').value = s.frame;
@@ -40,10 +40,24 @@ function pick(attr, key) {
     state.settings[key] = b.dataset[attr]; saveSettings(); applySettingsToForm(); renderPreview();
   }));
 }
-pick('layout', 'layout'); pick('bg', 'bg'); pick('tex', 'texture');
+pick('bg', 'bg'); pick('tex', 'texture');
+$('.settings .seg').addEventListener('click', async e => {
+  const del = e.target.closest('[data-deldesign]'), s = state.settings;
+  if (del) {
+    const i = +del.dataset.deldesign, d = s.designs[i]; if (!d) return;
+    if (!await confirmBox('Remove design?', `"${esc(d.name || 'My design')}" will be removed from this browser. Export it first if you want to keep it.`, 'Remove')) return;
+    const cur = ownIndex();
+    s.designs.splice(i, 1);
+    if (cur === i) s.layout = 'classic'; else if (cur > i) s.layout = 'own:' + (cur - 1);
+    saveSettings(); applySettingsToForm(); renderPreview(); updateDesignList();
+    return;
+  }
+  const b = e.target.closest('[data-layout]'); if (!b) return;
+  s.layout = b.dataset.layout; saveSettings(); applySettingsToForm(); renderPreview();
+});
 $('#btn-reset-settings').addEventListener('click', () => {
-  const custom = state.settings.customDesign;
-  state.settings = clone(DEFAULT_SETTINGS); state.settings.customDesign = custom;
+  const keep = { designs: state.settings.designs, layout: state.settings.layout };
+  state.settings = Object.assign(clone(DEFAULT_SETTINGS), keep);
   saveSettings(); applySettingsToForm(); renderPreview();
 });
 
@@ -89,15 +103,15 @@ const PRESETS = {
     { cells: [blk('legdet', { rel: 0.92 }), blk('nr', { align: 'right', bold: true, rel: 0.92, width: 'auto' })], lineAbove: 'light', pin: 'bottom' }
   ] }
 };
-function currentDesign() {
-  const s = state.settings;
-  if (s.layout === 'custom' && s.customDesign) return s.customDesign;
-  return PRESETS[s.layout] || PRESETS.classic;
-}
+function ownIndex() { const m = /^own:(\d+)$/.exec(state.settings.layout || ''), i = m ? +m[1] : -1; return state.settings.designs[i] ? i : -1; }
+function ownDesign() { const i = ownIndex(); return i >= 0 ? state.settings.designs[i] : null; }
+function currentDesign() { return ownDesign() || PRESETS[state.settings.layout] || PRESETS.classic; }
+// page settings: from an own design, otherwise from the sidebar
+function pageOf(d) { const s = state.settings, p = {}; PAGE_KEYS.forEach(k => { p[k] = d && d.page && d.page[k] != null ? d.page[k] : s[k]; }); return p; }
 function sidebarLook() { const s = state.settings; return { font: s.font, size: s.size, frame: s.frame, bg: s.bg, texture: s.texture }; }
 function currentLook() {
-  const s = state.settings;
-  return s.layout === 'custom' && s.customDesign && s.customDesign.look ? s.customDesign.look : sidebarLook();
+  const d = ownDesign();
+  return d && d.look ? d.look : sidebarLook();
 }
 
 // value of an own field or a table column by its name (upper and lower case do not matter)
@@ -220,7 +234,7 @@ function labelHTML(rec, d, look) {
 
 function sortedRecords() {
   const list = state.records.filter(r => r.include);
-  const s = state.settings.sort;
+  const s = pageOf(currentDesign()).sort;
   const cmp = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
   if (s === 'nr') list.sort((a, b) => cmp(text(a, 'nr'), text(b, 'nr')));
   if (s === 'art') list.sort((a, b) => cmp(text(a, 'art'), text(b, 'art')));
@@ -229,8 +243,7 @@ function sortedRecords() {
   return list;
 }
 
-function pageStyle(look) {
-  const s = state.settings;
+function pageStyle(look, s) {
   const [pw, ph] = PAPER[s.paper] || PAPER.A4;
   const bg = /^#[0-9a-f]{6}$/i.test(look.bg) ? look.bg : '#ffffff';
   return `--pw:${pw}mm;--ph:${ph}mm;--cols:${s.cols};--rows:${s.rows};--margin:${s.margin}mm;--gap:${s.gap}mm;--lfont:${look.font};--lsize:${look.size}pt;--lbg:${bg}`;
@@ -238,14 +251,14 @@ function pageStyle(look) {
 function pageClass(look) { return `frame-${esc(look.frame)} tx-${esc(look.texture)}`; }
 
 function renderPreview() {
-  const s = state.settings;
+  const d = currentDesign(), look = currentLook(), s = pageOf(d);
   const per = s.cols * s.rows;
-  const items = sortedRecords(), d = currentDesign(), look = currentLook();
+  const items = sortedRecords();
   const pages = [];
   for (let i = 0; i < items.length; i += per) pages.push(items.slice(i, i + per));
   $('#preview').innerHTML = pages.map(p => {
     while (p.length < per) p.push(null);
-    return `<div class="page ${pageClass(look)}" style="${esc(pageStyle(look))}">${p.map(r => r ? labelHTML(r, d, look) : '<div class="schild leer"></div>').join('')}</div>`;
+    return `<div class="page ${pageClass(look)}" style="${esc(pageStyle(look, s))}">${p.map(r => r ? labelHTML(r, d, look) : '<div class="schild leer"></div>').join('')}</div>`;
   }).join('') || '<p class="hint">No specimens selected.</p>';
   const n = items.length;
   $('#label-count').textContent = `${n} ${n === 1 ? 'label' : 'labels'} on ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`;

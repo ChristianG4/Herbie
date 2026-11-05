@@ -5,9 +5,12 @@
 
 // ================================================================ tabs
 function showTab(name) {
+  const was = ($('.tab.active') || {}).id;
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   $$('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
+  if (was === 'tab-data' && name !== 'data') saveSession();
   if (name === 'etiketten') renderPreview();
+  if (name === 'data') onDataTab();
   window.scrollTo({ top: 0 });
 }
 $$('.tab-btn').forEach(b => b.addEventListener('click', () => { if (!b.disabled) showTab(b.dataset.tab); }));

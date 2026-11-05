@@ -20,6 +20,7 @@ function toEditable(d, look) {
   if (!(d.v >= 4)) { d.rows.forEach(r => r.cells.forEach(c => { if (c.rel != null) { if (c.rel !== 1) c.size = Math.round(c.rel * base * 2) / 2; delete c.rel; } })); fillFromLabel(d, state.settings, base); }
   d.v = 4; // sizes in pt; texts and formats in the blocks
   d.label = Object.assign(sidebarLabel(), d.label || {});
+  d.page = Object.assign(pageOf(null), d.page || {});
   d.look = Object.assign({}, look);
   d.customFields = d.customFields || [];
   d.images = d.images || [];
@@ -60,31 +61,49 @@ function fillFromLabel(d, src, base) {
 function orderRows(d) { d.rows = d.rows.filter(r => r.pin !== 'bottom').concat(d.rows.filter(r => r.pin === 'bottom')); }
 
 function openDesigner() {
-  const s = state.settings;
-  const own = s.layout === 'custom' && s.customDesign;
-  ed.d = toEditable(clone(own ? s.customDesign : (PRESETS[s.layout] || PRESETS.classic)), own && s.customDesign.look ? s.customDesign.look : sidebarLook());
+  const s = state.settings, own = ownDesign();
+  ed.idx = ownIndex(); // -1: a new design, made from the selected ready-made layout
+  ed.d = toEditable(clone(own || PRESETS[s.layout] || PRESETS.classic), own && own.look ? own.look : sidebarLook());
   if (!own) ed.d.name = 'My design';
   ed.sel = null;
   ed.rec = Math.max(0, state.records.indexOf(sortedRecords()[0] || state.records[0]));
   $('#dg-name').value = ed.d.name || '';
-  lookToForm(); labelToForm();
+  lookToForm(); labelToForm(); pageToForm();
   ddlg.showModal();
   renderEditor();
 }
 $('#btn-design').addEventListener('click', openDesigner);
 $('#dg-cancel').addEventListener('click', () => ddlg.close());
-$('#dg-apply').addEventListener('click', () => {
+$('#dg-apply').addEventListener('click', async () => {
   ed.d.name = $('#dg-name').value.trim() || 'My design';
-  state.settings.customDesign = sanitizeDesign(ed.d);
-  state.settings.layout = 'custom';
-  saveSettings(); applySettingsToForm(); renderPreview();
+  const d = sanitizeDesign(ed.d), s = state.settings;
+  if (ed.idx >= 0 && s.designs[ed.idx]) s.designs[ed.idx] = d;
+  else if (!(await addDesign(d))) return;
+  else ed.idx = s.designs.indexOf(d);
+  s.layout = 'own:' + ed.idx;
+  saveSettings(); applySettingsToForm(); renderPreview(); updateDesignList();
   ddlg.close();
-  toast('Design applied');
 });
+// adds a design to the list (a design with the same name is replaced); false when the list is full
+async function addDesign(d) {
+  const s = state.settings, same = s.designs.findIndex(x => (x.name || '').toLowerCase() === (d.name || '').toLowerCase());
+  if (same >= 0) { s.designs[same] = d; return true; }
+  if (s.designs.length >= MAX_DESIGNS) {
+    await alertBox('Only 5 designs allowed', `Herbie keeps at most ${MAX_DESIGNS} own designs. Remove one with the &#10005; next to its name under "Layout" first, then try again.`);
+    return false;
+  }
+  s.designs.push(d); return true;
+}
+// names of the loaded designs, shown under "Load table"
+function updateDesignList() {
+  const el = $('#design-list-1'), n = state.settings.designs.map(d => d.name || 'My design');
+  el.hidden = !n.length;
+  el.textContent = n.length ? `Designs: ${n.join(', ')} (${n.length} of ${MAX_DESIGNS})` : '';
+}
 $('#dg-preset').addEventListener('change', e => {
   const p = PRESETS[e.target.value]; e.target.value = '';
   if (!p) return;
-  const keep = { images: ed.d.images, look: ed.d.look, customFields: ed.d.customFields, label: ed.d.label };
+  const keep = { images: ed.d.images, look: ed.d.look, customFields: ed.d.customFields, label: ed.d.label, page: ed.d.page };
   ed.d = toEditable(clone(p), keep.look);
   Object.assign(ed.d, keep, { name: $('#dg-name').value || 'My design' });
   ed.sel = null;
@@ -105,6 +124,28 @@ const readLabel = () => {
 };
 $('#dg-label').addEventListener('input', readLabel);
 $('#dg-label').addEventListener('change', readLabel);
+
+// ---- page settings of the design (paper, sort, labels per page, margins)
+$('#dg-paper').innerHTML = $('#s-paper').innerHTML;
+$('#dg-sort').innerHTML = $('#s-sort').innerHTML;
+function pageToForm() { const P = ed.d.page; PAGE_KEYS.forEach(k => { $('#dg-' + k).value = P[k]; }); }
+function readPage() {
+  const P = ed.d.page, num = (k, a, b) => { const v = parseFloat($('#dg-' + k).value); if (isFinite(v)) P[k] = Math.min(b, Math.max(a, v)); };
+  P.paper = $('#dg-paper').value; P.sort = $('#dg-sort').value;
+  num('cols', 1, 4); num('rows', 1, 8); num('margin', 0, 30); num('gap', 0, 20);
+  P.cols = Math.round(P.cols); P.rows = Math.round(P.rows);
+  renderEditor();
+}
+$('#dg-pageset').addEventListener('change', readPage);
+$('#dg-pageset').addEventListener('input', debounce(readPage, 200));
+// resets label, style and page of the design to the defaults; the blocks stay
+$('#dg-reset').addEventListener('click', () => {
+  const D = DEFAULT_SETTINGS;
+  ed.d.label = { lang: D.lang, showEmpty: D.showEmpty };
+  ed.d.look = { font: D.font, size: D.size, frame: D.frame, bg: D.bg, texture: D.texture };
+  ed.d.page = {}; PAGE_KEYS.forEach(k => { ed.d.page[k] = D[k]; });
+  labelToForm(); lookToForm(); pageToForm(); renderEditor();
+});
 
 // ---- look of the design (font, size, frame, background, texture)
 function lookToForm() {
@@ -141,7 +182,7 @@ $('#dg-imgs').addEventListener('click', e => {
 });
 
 function labelSizeMm() {
-  const s = state.settings, [pw, ph] = PAPER[s.paper] || PAPER.A4;
+  const s = pageOf(ed.d), [pw, ph] = PAPER[s.paper] || PAPER.A4;
   return [(pw - 2 * s.margin - (s.cols - 1) * s.gap) / s.cols, (ph - 2 * s.margin - (s.rows - 1) * s.gap) / s.rows];
 }
 
@@ -153,7 +194,7 @@ function renderEditor() {
   const [w, h] = labelSizeMm();
   const availW = stage.clientWidth - 48, availH = stage.clientHeight - 48;
   const zoom = Math.max(1, Math.min(3.2, availW / (w * 3.7795), availH / (h * 3.7795)));
-  stage.innerHTML = `<div class="dg-page ${pageClass(look)}" style="${esc(pageStyle(look))};zoom:${zoom.toFixed(2)}">
+  stage.innerHTML = `<div class="dg-page ${pageClass(look)}" style="${esc(pageStyle(look, pageOf(ed.d)))};zoom:${zoom.toFixed(2)}">
     <div class="schild editing" style="width:${w.toFixed(2)}mm;height:${h.toFixed(2)}mm">${renderDesign(ed.d, rec, true, look)}</div></div>`;
   $('#dg-rec').textContent = state.records.length ? `${ed.rec + 1} / ${state.records.length}: ${text(rec, 'nr')} ${text(rec, 'art')}` : 'No data loaded';
   stage.classList.toggle('noguides', !$('#dg-guides').checked);
@@ -577,6 +618,9 @@ function sanitizeDesign(d, oldLook) {
   const lab = Object.assign({}, state.settings, (d && d.label) || {});
   out.label = { lang: TEXT[lab.lang] ? lab.lang : 'en', showEmpty: !!lab.showEmpty };
   if (!v4) fillFromLabel(out, lab, out.look.size);
+  const pg = Object.assign(pageOf(null), (d && d.page) || {});
+  out.page = { paper: PAPER[pg.paper] ? pg.paper : 'A4', sort: [...$('#s-sort').options].some(o => o.value === pg.sort) ? pg.sort : 'none',
+    cols: Math.round(num(pg.cols, 1, 4, 2)), rows: Math.round(num(pg.rows, 1, 8, 4)), margin: num(pg.margin, 0, 30, 7), gap: num(pg.gap, 0, 20, 4) };
   ((d && d.customFields) || []).slice(0, 30).forEach(n => { n = str(n, 60).trim(); if (n && !out.customFields.some(x => x.toLowerCase() === n.toLowerCase())) out.customFields.push(n); });
   if (!out.rows.length) out.rows = toEditable(clone(PRESETS.classic), out.look).rows;
   orderRows(out);
@@ -597,13 +641,17 @@ function importDesign(file, intoEditor) {
     try { data = JSON.parse(r.result); } catch (e) { /* handled below */ }
     if (!data || data.herbie !== 'label-design' || !data.design) { toast('This is not a Herbie design file'); return; }
     const d = sanitizeDesign(data.design, data.look);
-    if (intoEditor) { ed.d = toEditable(d, d.look); ed.sel = null; $('#dg-name').value = d.name; lookToForm(); labelToForm(); renderEditor(); }
-    else { state.settings.customDesign = d; state.settings.layout = 'custom'; saveSettings(); applySettingsToForm(); renderPreview(); }
-    toast(`Design "${d.name}" imported`);
+    if (intoEditor) { ed.d = toEditable(d, d.look); ed.sel = null; $('#dg-name').value = d.name; lookToForm(); labelToForm(); pageToForm(); renderEditor(); return; }
+    addDesign(d).then(ok => {
+      if (!ok) return;
+      state.settings.layout = 'own:' + state.settings.designs.indexOf(d);
+      saveSettings(); applySettingsToForm(); renderPreview(); updateDesignList();
+    });
   };
   r.readAsText(file);
 }
 $('#btn-import-design').addEventListener('click', () => $('#design-file').click());
+$('#btn-import-design-1').addEventListener('click', () => $('#design-file').click());
 $('#design-file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importDesign(f, false); });
 $('#dg-import').addEventListener('click', () => $('#dg-file').click());
 $('#dg-file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importDesign(f, true); });
@@ -615,9 +663,9 @@ $('#dg-export').addEventListener('click', () => { ed.d.name = $('#dg-name').valu
   if (m) { const repo = location.pathname.split('/').filter(Boolean)[0]; $('#repo-link').href = `https://github.com/${m[1]}${repo ? '/' + repo : ''}`; }
 })();
 $('#s-lang').innerHTML = Object.entries(TEXT).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
-if (state.settings.customDesign) state.settings.customDesign = sanitizeDesign(state.settings.customDesign);
-if (state.settings.layout === 'custom' && !state.settings.customDesign) state.settings.layout = 'classic';
-if (!PRESETS[state.settings.layout] && state.settings.layout !== 'custom') state.settings.layout = 'classic';
+state.settings.designs = state.settings.designs.slice(0, MAX_DESIGNS).map(d => sanitizeDesign(d));
+if (!PRESETS[state.settings.layout] && ownIndex() < 0) state.settings.layout = 'classic';
+updateDesignList();
 applySettingsToForm();
 checkResume();
 window.addEventListener('beforeunload', saveSessionNow);

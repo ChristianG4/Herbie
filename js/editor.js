@@ -3,18 +3,19 @@
  */
 'use strict';
 
-// ================================================================ data dialog (table + map + editor)
-const dlg = $('#data-dialog');
+// ================================================================ 4: data (table + map + editor)
 function openData(i) {
   if (!state.records.length) return;
   if (i != null && i >= 0) state.selected = i;
-  if (!dlg.open) dlg.showModal();
+  showTab('data');
+}
+// called by showTab when the data tab is shown
+function onDataTab() {
   initMap(); renderList(); selectRecord(state.selected, true);
   setTimeout(() => { map.invalidateSize(); fitAll(); }, 40);
 }
 $('#btn-open-data').addEventListener('click', () => openData());
-$('#btn-close-data').addEventListener('click', () => dlg.close());
-dlg.addEventListener('close', () => { saveSession(); renderPreview(); });
+$('#btn-close-data').addEventListener('click', () => showTab('etiketten'));
 $('#preview').addEventListener('click', e => { const el = e.target.closest('.schild[data-i]'); if (el) openData(+el.dataset.i); });
 
 // ---- map: a locality is locked once set; "Clear coordinates" unlocks it

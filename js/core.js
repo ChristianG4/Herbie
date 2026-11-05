@@ -48,13 +48,16 @@ const DEFAULT_SETTINGS = {
   paper: 'A4', sort: 'none', cols: 2, rows: 4, margin: 7, gap: 4
 };
 const PAPER = { A4: [210, 297], Letter: [215.9, 279.4] };
-const MAX_DESIGNS = 5;
+const MAX_DESIGNS = 20;
 const PAGE_KEYS = ['paper', 'sort', 'cols', 'rows', 'margin', 'gap'];
 const ELEV_SOURCE = 'Copernicus GLO-90 via Open-Meteo';
 
 const LS_SETTINGS = 'herbar.settings.v1';
 const LS_MAPPING = 'herbar.mapping.v1';
-const LS_SESSION = 'herbar.session.v1';
+const LS_SESSION = 'herbar.session.v1';      // before 1.2: one saved table
+const LS_SESSIONS = 'herbar.sessions.v1';    // list of saved tables; each one under LS_SESSION_PREFIX + id
+const LS_SESSION_PREFIX = 'herbar.table.';
+const MAX_SESSIONS = 10;
 const LS_CUSTOM = 'herbar.custom.v1';
 
 // ================================================================ state

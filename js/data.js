@@ -97,10 +97,18 @@ function setData(headers, rows) {
   buildRecords();
   renderMapping();
   enableTabs(true);
+  state.sessionId = newSessionId(); // a new entry in "Recent tables"
   saveSession();
   // stay on step 1: the user goes on with "Continue"
   $('#loaded-name').textContent = `${state.fileName || 'table'}, ${rows.length} rows`;
-  $('#loaded').hidden = false; $('#resume').hidden = true;
+  $('#loaded').hidden = false;
+  // the tick stays where the data came from: the drop field for a file, the button for the example data
+  const demo = state.fileName === 'Example data', demoBtn = $('#btn-demo');
+  $('#dropzone').classList.toggle('done', !demo);
+  $('#dz-title').textContent = demo ? 'Drop an Excel or CSV file here' : `\u2713 ${state.fileName} loaded`;
+  $('#dz-sub').textContent = demo ? 'or click to choose one (.xlsx, .xls, .ods, .csv). A design file (.herbie.json) can be dropped here too.' : 'Drop another file here or click to replace it.';
+  demoBtn.textContent = demo ? '\u2713 Try example data' : 'Try example data';
+  demoBtn.classList.toggle('done', demo);
 }
 $('#btn-to-columns').addEventListener('click', () => showTab('spalten'));
 
@@ -295,35 +303,82 @@ $('#btn-demo').addEventListener('click', () => {
   if (!$('#s-title').value || state.settings.title === 'Herbarium') { state.settings.title = 'Herbarium Jane Doe'; saveSettings(); applySettingsToForm(); }
 });
 
-// ================================================================ session persistence
+// ================================================================ saved tables (recent tables on step 1)
+// every loaded table is kept with its changes; the list holds at most MAX_SESSIONS tables
+function sessionList() { const l = loadJSON(LS_SESSIONS, []); return Array.isArray(l) ? l : []; }
+function newSessionId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function saveSessionNow() {
-  if (!state.rows.length) return;
-  const ok = saveJSON(LS_SESSION, {
+  if (!state.rows.length || !state.sessionId) return;
+  const data = {
     fileName: state.fileName, headers: state.headers, rows: state.rows, mapping: state.mapping, custom: state.custom,
-    records: state.records.map(r => ({ id: r.id, edit: r.edit, include: r.include })), saved: Date.now()
-  });
-  if (!ok) console.warn('Session could not be saved (storage full or disabled).');
+    records: state.records.map(r => ({ id: r.id, edit: r.edit, include: r.include }))
+  };
+  // nothing changed since opening or the last save: keep the date of the last change
+  const snap = JSON.stringify(data);
+  if (snap === state.sessionSnap) return;
+  state.sessionSnap = snap; data.saved = Date.now();
+  let list = sessionList().filter(x => x.id !== state.sessionId);
+  list.unshift({ id: state.sessionId, name: state.fileName || 'table', rows: state.rows.length, saved: data.saved });
+  // too many tables or storage full: the oldest ones are removed first
+  while (list.length > MAX_SESSIONS) removeKey(LS_SESSION_PREFIX + list.pop().id);
+  let ok = saveJSON(LS_SESSION_PREFIX + state.sessionId, data);
+  while (!ok && list.length > 1) { removeKey(LS_SESSION_PREFIX + list.pop().id); ok = saveJSON(LS_SESSION_PREFIX + state.sessionId, data); }
+  if (!ok) { list = list.filter(x => x.id !== state.sessionId); if (!saveSessionNow.warned) { saveSessionNow.warned = true; toast('This table is too large to be kept in the browser. Use "Export table" to save your changes.', 6000); } }
+  saveJSON(LS_SESSIONS, list);
+  renderRecent();
 }
 const saveSession = debounce(saveSessionNow, 400);
 
+function openSession(id) {
+  const s = loadJSON(LS_SESSION_PREFIX + id, null);
+  if (!s || !s.rows || !s.rows.length) { toast('This table could not be read.'); return; }
+  state.sessionId = id;
+  state.fileName = s.fileName;
+  state.sessionSnap = null;
+  state.headers = s.headers; state.rows = s.rows; state.mapping = s.mapping; state.custom = s.custom || [];
+  delete state.mapping.habitat;
+  state.records = s.rows.map((row, i) => ({ id: i, row, edit: {}, include: true }));
+  const byId = Object.fromEntries((s.records || []).map(r => [r.id, r]));
+  state.records.forEach(r => { if (byId[r.id]) { r.edit = byId[r.id].edit || {}; r.include = byId[r.id].include !== false; } });
+  pruneEmpty();
+  state.sessionSnap = JSON.stringify({ fileName: state.fileName, headers: state.headers, rows: state.rows, mapping: state.mapping, custom: state.custom,
+    records: state.records.map(r => ({ id: r.id, edit: r.edit, include: r.include })) });
+  state.selected = state.records.length ? 0 : -1;
+  $('#sheet-select-wrap').hidden = true;
+  renderMapping(); enableTabs(true); showTab('etiketten');
+  renderRecent();
+}
+function renderRecent() {
+  const list = sessionList(), fmt = t => new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  $('#recent').hidden = !list.length;
+  $('#recent-count').textContent = `(${list.length})`;
+  $('#recent-list').innerHTML = list.map(x => `<li>
+    <div class="rc-info"><b>${esc(x.name)}</b><small>${x.rows} ${x.rows === 1 ? 'row' : 'rows'} · last edited ${esc(fmt(x.saved))}</small></div>
+    ${x.id === state.sessionId ? '<span class="pill">open</span>' : ''}
+    <button class="btn small" data-open="${esc(x.id)}">Open</button>
+    <button class="btn small ghost rc-del" data-del="${esc(x.id)}" title="Delete this table from the browser">&#10005;</button></li>`).join('');
+}
+$('#recent-list').addEventListener('click', async e => {
+  const o = e.target.closest('[data-open]'), d = e.target.closest('[data-del]');
+  if (o) openSession(o.dataset.open);
+  if (d) {
+    const x = sessionList().find(s => s.id === d.dataset.del); if (!x) return;
+    if (!await confirmBox('Delete table?', `"${esc(x.name)}" and all changes made to it will be deleted from this browser. Use "Export table" first if you want to keep them.`, 'Delete')) return;
+    removeKey(LS_SESSION_PREFIX + x.id);
+    saveJSON(LS_SESSIONS, sessionList().filter(s => s.id !== x.id));
+    if (x.id === state.sessionId) state.sessionId = null; // the table stays open but is no longer saved
+    renderRecent();
+  }
+});
+// tables saved by older versions (only one) move into the list
 function checkResume() {
-  const s = loadJSON(LS_SESSION, null);
-  if (!s || !s.rows || !s.rows.length) return;
-  $('#resume-name').textContent = `${s.fileName || 'table'}, ${s.rows.length} rows`;
-  $('#resume').hidden = false;
-  $('#btn-resume').onclick = () => {
-    state.fileName = s.fileName;
-    state.headers = s.headers; state.rows = s.rows; state.mapping = s.mapping; state.custom = s.custom || [];
-    delete state.mapping.habitat;
-    state.records = s.rows.map((row, i) => ({ id: i, row, edit: {}, include: true }));
-    const byId = Object.fromEntries((s.records || []).map(r => [r.id, r]));
-    state.records.forEach(r => { if (byId[r.id]) { r.edit = byId[r.id].edit || {}; r.include = byId[r.id].include !== false; } });
-    pruneEmpty();
-    state.selected = state.records.length ? 0 : -1;
-    $('#sheet-select-wrap').hidden = true;
-    renderMapping(); enableTabs(true); showTab('etiketten');
-    $('#resume').hidden = true;
-    toast('Session restored');
-  };
-  $('#btn-discard').onclick = () => { removeKey(LS_SESSION); $('#resume').hidden = true; };
+  const old = loadJSON(LS_SESSION, null);
+  if (old && old.rows && old.rows.length) {
+    const id = newSessionId();
+    if (saveJSON(LS_SESSION_PREFIX + id, old)) {
+      saveJSON(LS_SESSIONS, [{ id, name: old.fileName || 'table', rows: old.rows.length, saved: old.saved || Date.now() }].concat(sessionList()));
+      removeKey(LS_SESSION);
+    }
+  }
+  renderRecent();
 }

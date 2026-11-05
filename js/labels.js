@@ -14,6 +14,7 @@ function applySettingsToForm() {
   // own designs (up to MAX_DESIGNS) appear next to the ready-made layouts; the cross removes one
   $('#own-layouts').innerHTML = s.designs.map((d, i) => `<span class="own-btn"><button type="button" data-layout="own:${i}">${esc(d.name || 'My design')}</button><button type="button" class="own-del" data-deldesign="${i}" title="Remove this design">&#10005;</button></span>`).join('');
   $$('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === s.layout));
+  if (typeof renderDesignList === 'function') renderDesignList();
   // label, look and page settings of an own design are set in the designer
   $$('.preset-only').forEach(el => { el.hidden = own; });
   $$('.own-only').forEach(el => { el.hidden = !own; });
@@ -40,17 +41,9 @@ function pick(attr, key) {
   }));
 }
 pick('bg', 'bg'); pick('tex', 'texture');
-$('.settings .seg').addEventListener('click', async e => {
+$('.settings .seg').addEventListener('click', e => {
   const del = e.target.closest('[data-deldesign]'), s = state.settings;
-  if (del) {
-    const i = +del.dataset.deldesign, d = s.designs[i]; if (!d) return;
-    if (!await confirmBox('Remove design?', `"${esc(d.name || 'My design')}" will be removed from this browser. Export it first if you want to keep it.`, 'Remove')) return;
-    const cur = ownIndex();
-    s.designs.splice(i, 1);
-    if (cur === i) s.layout = 'classic'; else if (cur > i) s.layout = 'own:' + (cur - 1);
-    saveSettings(); applySettingsToForm(); renderPreview();
-    return;
-  }
+  if (del) { deleteDesign(+del.dataset.deldesign); return; }
   const b = e.target.closest('[data-layout]'); if (!b) return;
   s.layout = b.dataset.layout; saveSettings(); applySettingsToForm(); renderPreview();
 });

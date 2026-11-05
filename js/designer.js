@@ -99,12 +99,39 @@ $('#dg-apply').addEventListener('click', async () => {
 // adds a design to the list (a design with the same name is replaced); false when the list is full
 async function addDesign(d) {
   const s = state.settings, same = s.designs.findIndex(x => (x.name || '').toLowerCase() === (d.name || '').toLowerCase());
+  d.saved = Date.now();
   if (same >= 0) { s.designs[same] = d; return true; }
   if (s.designs.length >= MAX_DESIGNS) {
-    await alertBox('Only 5 designs allowed', `Herbie keeps at most ${MAX_DESIGNS} own designs. Remove one with the &#10005; next to its name under "Layout" first, then try again.`);
+    await alertBox(`Only ${MAX_DESIGNS} designs allowed`, `Herbie keeps at most ${MAX_DESIGNS} own designs. Delete one under "Your designs" on the first page or with the &#10005; next to its name under "Layout", then try again.`);
     return false;
   }
   s.designs.push(d); return true;
+}
+// "Your designs" on the first page: use, export or delete a design
+function renderDesignList() {
+  const s = state.settings, cur = ownIndex(), fmt = t => new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  $('#designs-card').hidden = !s.designs.length;
+  $('#design-count').textContent = `(${s.designs.length})`;
+  $('#design-list').innerHTML = s.designs.map((d, i) => `<li>
+    <div class="rc-info"><b>${esc(d.name || 'My design')}</b><small>${d.saved ? 'last changed ' + esc(fmt(d.saved)) : '&nbsp;'}</small></div>
+    ${i === cur ? '<span class="pill">in use</span>' : ''}
+    <button class="btn small" data-use="${i}">Use</button>
+    <button class="btn small ghost" data-exp="${i}">Export</button>
+    <button class="btn small ghost rc-del" data-deldesign="${i}" title="Delete this design from the browser">&#10005;</button></li>`).join('');
+}
+$('#design-list').addEventListener('click', async e => {
+  const s = state.settings, u = e.target.closest('[data-use]'), x = e.target.closest('[data-exp]'), del = e.target.closest('[data-deldesign]');
+  if (u) { s.layout = 'own:' + u.dataset.use; saveSettings(); applySettingsToForm(); renderPreview(); if (state.records.length) showTab('etiketten'); }
+  if (x) exportDesign(s.designs[+x.dataset.exp]);
+  if (del) deleteDesign(+del.dataset.deldesign);
+});
+async function deleteDesign(i) {
+  const s = state.settings, d = s.designs[i]; if (!d) return;
+  if (!await confirmBox('Delete design?', `"${esc(d.name || 'My design')}" will be deleted from this browser. Export it first if you want to keep it.`, 'Delete')) return;
+  const cur = ownIndex();
+  s.designs.splice(i, 1);
+  if (cur === i) s.layout = 'classic'; else if (cur > i) s.layout = 'own:' + (cur - 1);
+  saveSettings(); applySettingsToForm(); renderPreview();
 }
 $('#dg-preset').addEventListener('change', e => {
   const v = e.target.value; e.target.value = '';
@@ -599,7 +626,7 @@ function sanitizeDesign(d, oldLook) {
   const num = (v, a, b, def) => { const x = parseFloat(v); return isFinite(x) ? Math.min(b, Math.max(a, x)) : def; };
   const v2 = d && d.v >= 2, v3 = d && d.v >= 3, v4 = d && d.v >= 4;
   const look = Object.assign(sidebarLook(), (d && d.look) || oldLook || {});
-  const out = { v: 4, name: str(d && d.name, 80) || 'Imported design', rows: [], images: [], customFields: [], look: {
+  const out = { v: 4, name: str(d && d.name, 80) || 'Imported design', saved: d && isFinite(d.saved) ? +d.saved : undefined, rows: [], images: [], customFields: [], look: {
     font: [...$('#s-font').options].some(o => o.value === look.font) ? look.font : DEFAULT_SETTINGS.font,
     size: num(look.size, 5, 30, 10),
     frame: FRAMES.includes(look.frame) ? look.frame : 'classic',
@@ -685,7 +712,7 @@ function importDesign(file, intoEditor, fromStart) {
       if (!ok) return;
       state.settings.layout = 'own:' + state.settings.designs.indexOf(d);
       saveSettings(); applySettingsToForm(); renderPreview();
-      if (fromStart) { const b = $('#btn-import-design-1'); b.textContent = '\u2713 Design loaded'; setTimeout(() => { b.textContent = 'Import design'; }, 2000); }
+      if (fromStart) { const b = $('#btn-import-design-1'); b.textContent = '\u2713 Design loaded'; b.classList.add('done'); }
     });
   };
   r.readAsText(file);

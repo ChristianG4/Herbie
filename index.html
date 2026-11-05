@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/logo-small.png">
   <link rel="apple-touch-icon" href="assets/logo-small.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=2.1">
+  <link rel="stylesheet" href="style.css?v=2.7">
 </head>
 <body>
   <header class="app-header">
@@ -39,8 +39,8 @@
           <h2>Load table</h2>
           <label id="dropzone" class="dropzone">
             <input type="file" id="file-input" accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv">
-            <strong>Drop an Excel or CSV file here</strong>
-            <span>or click to choose one (.xlsx, .xls, .ods, .csv). A design file (.herbie.json) can be dropped here too.</span>
+            <strong id="dz-title">Drop an Excel or CSV file here</strong>
+            <span id="dz-sub">or click to choose one (.xlsx, .xls, .ods, .csv). A design file (.herbie.json) can be dropped here too.</span>
           </label>
           <div class="load-btns">
             <button class="btn ghost" id="btn-template" title="Download an empty Excel template">Download template</button>
@@ -52,15 +52,18 @@
             <span>Table loaded (<b id="loaded-name"></b>).</span>
             <button class="btn small primary" id="btn-to-columns">Continue</button>
           </div>
-          <div id="resume" class="notice" hidden>
-            <span>There is a saved session (<b id="resume-name"></b>).</span>
-            <span class="row gap">
-              <button class="btn small" id="btn-resume">Continue</button>
-              <button class="btn small ghost" id="btn-discard">Discard</button>
-            </span>
-          </div>
           <p class="hint">Your data never leaves your computer. The file is read in your browser only, nothing is uploaded. Only the map tiles and the optional place search load data from the internet.</p>
         </div>
+        <details class="card recent" id="recent" hidden>
+          <summary><h2>Recent tables <span class="count" id="recent-count"></span></h2></summary>
+          <p class="hint tiny">Tables you worked on, with all your changes. They are kept in this browser only.</p>
+          <ul class="recent-list" id="recent-list"></ul>
+        </details>
+        <details class="card recent" id="designs-card" hidden>
+          <summary><h2>Your designs <span class="count" id="design-count"></span></h2></summary>
+          <p class="hint tiny">Label designs you made or imported. They are kept in this browser only; use "Export" to keep a copy.</p>
+          <ul class="recent-list" id="design-list"></ul>
+        </details>
       </div>
     </section>
 
@@ -411,10 +414,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/core.js?v=2.1"></script>
-  <script src="js/data.js?v=2.1"></script>
-  <script src="js/editor.js?v=2.1"></script>
-  <script src="js/labels.js?v=2.1"></script>
-  <script src="js/designer.js?v=2.1"></script>
+  <script src="js/core.js?v=2.7"></script>
+  <script src="js/data.js?v=2.7"></script>
+  <script src="js/editor.js?v=2.7"></script>
+  <script src="js/labels.js?v=2.7"></script>
+  <script src="js/designer.js?v=2.7"></script>
 </body>
 </html>

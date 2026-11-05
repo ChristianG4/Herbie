@@ -122,16 +122,18 @@ function fieldsKeys(c) {
 }
 
 // one body field: {key, label, html, empty} or null when it is empty and empty fields are hidden
-function bodyField(rec, key, s, T) {
+// c = fields block; its own date and coordinate formats win over the label settings
+function bodyField(rec, key, s, T, c) {
   let label, val = '';
+  const cf = (c && c.coordfmt) || s.coordfmt, df = (c && c.datefmt) || s.datefmt;
   if (key.startsWith('col:')) { label = esc(key.slice(4)); val = esc(colValue(rec, key.slice(4))); }
   else switch (key) {
     case 'trivial': label = T.triv; val = esc(text(rec, 'trivial')); break;
     case 'familie': label = T.fam; val = esc(text(rec, 'familie')); break;
     case 'fundort': label = T.fundort; val = esc(text(rec, 'fundort')); break;
-    case 'coords':  { label = T.coords; const ll = getLatLon(rec); val = ll ? `${fmtCoord(ll[0], true, s.coordfmt, T)}, ${fmtCoord(ll[1], false, s.coordfmt, T)}` : ''; break; }
+    case 'coords':  { label = T.coords; const ll = getLatLon(rec); val = !ll ? '' : cf === 'latlon' ? `Lat: ${ll[0].toFixed(5)}, Lon: ${ll[1].toFixed(5)}` : `${fmtCoord(ll[0], true, cf, T)}, ${fmtCoord(ll[1], false, cf, T)}`; break; }
     case 'hoehe':   { label = T.hoehe; const h = text(rec, 'hoehe'); val = h ? `${esc(h.replace(/\s*m$/i, ''))} ${T.m}` : ''; break; }
-    case 'datum':   label = T.datum; val = esc(labelDate(text(rec, 'datum'), s.datefmt, T)); break;
+    case 'datum':   label = T.datum; val = esc(labelDate(text(rec, 'datum'), df, T)); break;
     case 'notizen': label = T.bem; val = esc(text(rec, 'notizen')); break;
     default: return null;
   }
@@ -173,7 +175,7 @@ function renderDesign(d, rec, edit, look) {
       }
       case 'nr': { const nr = text(rec, 'nr'); return nr ? `${c.label === false ? '' : T.nr + ' '}${esc(nr)}` : ph('[No.]'); }
       case 'fields': {
-        const list = fieldsKeys(c).map(k => bodyField(rec, k, s, T)).filter(Boolean);
+        const list = fieldsKeys(c).map(k => bodyField(rec, k, s, T, c)).filter(Boolean);
         const none = ph('[Fields: ' + (fieldsKeys(c).map(keyLabel).join(', ') || 'none selected') + ']');
         if (c.style === 'table') return list.length ? `<div class="kv">${list.map(f => `<b>${f.label}</b><span>${f.html}</span>`).join('')}</div>` : none;
         if (c.style === 'plain') return list.filter(f => !f.empty).map(f => `<div class="p">${f.html}</div>`).join('') || none;

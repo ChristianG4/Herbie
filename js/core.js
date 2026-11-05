@@ -72,6 +72,9 @@ state.settings = (function loadSettings() {
   if (!saved.frame && saved.show && saved.show.border === false) saved.frame = 'none';
   const s = Object.assign(clone(DEFAULT_SETTINGS), saved);
   delete s.show; delete s.order; delete s.skip;
+  if (s.datefmt === 'roman') s.datefmt = 'dmy';             // removed in 1.1
+  if (s.texture === 'parchment') s.texture = 'paper';        // removed in 1.1
+  if (s.texture === 'leaves') s.texture = 'none';            // removed in 1.1
   return s;
 })();
 
@@ -155,7 +158,6 @@ function formatDate(v) {
   if (iso) return `${iso[3]}.${iso[2]}.${iso[1]}`;
   return s;
 }
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 // "DD.MM.YYYY" -> chosen label format; anything unparseable is printed as is
 function labelDate(s, fmt, T) {
   const m = String(s).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
@@ -163,7 +165,6 @@ function labelDate(s, fmt, T) {
   const d = +m[1], mo = +m[2], y = +m[3];
   if (mo < 1 || mo > 12) return s;
   if (fmt === 'iso') return `${y}-${pad(mo)}-${pad(d)}`;
-  if (fmt === 'roman') return `${d}.${ROMAN[mo - 1]}.${y}`;
   if (fmt === 'long') {
     try { return new Intl.DateTimeFormat(T.locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, mo - 1, d))); }
     catch (e) { return s; }

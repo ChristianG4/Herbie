@@ -49,7 +49,9 @@ $('#btn-reset-settings').addEventListener('click', () => {
 
 // ================================================================ label designs
 // A design is a list of rows; each row holds blocks side by side. Images float freely on top.
-// Block types: header, name, nr, fields, legdet, text, line, blank (empty field).
+// Block types: header, subheader, name, nr, fields, legdet, text, line, blank (empty field).
+// header: own text or the Header of the label settings; withSub (ready-made layouts) also prints the Subheader below it.
+// subheader: own text or the Subheader of the label settings.
 // Block options: size (pt; ready-made layouts use rel = factor of the base size), bold, italic, textcase,
 // color, align (left|center|right), valign (top|middle|bottom), w (% of the row), h (minimum height in mm).
 // Row options: lineAbove, lineBelow (dark|light), pin ('bottom' sticks the row to the bottom of the label).
@@ -60,19 +62,19 @@ const NO_FAM = DEFAULT_KEYS.filter(k => k !== 'familie');
 const RECOMMENDED = ['fundort', 'datum'];
 const PRESETS = {
   classic: { name: 'Classic', rows: [
-    { cells: [blk('header', { align: 'center', bold: true })], lineBelow: 'dark' },
+    { cells: [blk('header', { align: 'center', bold: true, withSub: true })], lineBelow: 'dark' },
     { cells: [blk('name', { label: true }), blk('nr', { align: 'right', bold: true, width: 'auto' })] },
     { cells: [blk('fields', { style: 'inline', keys: DEFAULT_KEYS, auto: true })] },
     { cells: [blk('legdet')], lineAbove: 'light', pin: 'bottom' }
   ] },
   table: { name: 'Table', rows: [
-    { cells: [blk('header', { align: 'center', bold: true })], lineBelow: 'dark' },
+    { cells: [blk('header', { align: 'center', bold: true, withSub: true })], lineBelow: 'dark' },
     { cells: [blk('name', { label: true }), blk('nr', { align: 'right', bold: true, width: 'auto' })] },
     { cells: [blk('fields', { style: 'table', keys: DEFAULT_KEYS, auto: true })] },
     { cells: [blk('legdet')], lineAbove: 'light', pin: 'bottom' }
   ] },
   name: { name: 'Name first', rows: [
-    { cells: [blk('header', { rel: 0.85, textcase: 'upper' }), blk('nr', { align: 'right', bold: true, rel: 0.85, width: 'auto' })] },
+    { cells: [blk('header', { rel: 0.85, textcase: 'upper', withSub: true }), blk('nr', { align: 'right', bold: true, rel: 0.85, width: 'auto' })] },
     { cells: [blk('name', { align: 'center', rel: 1.35 })] },
     { cells: [blk('fields', { style: 'plain', keys: ['familie'], align: 'center', rel: 0.92 })] },
     { cells: [blk('line', { linewidth: 64, align: 'center' })] },
@@ -80,7 +82,7 @@ const PRESETS = {
     { cells: [blk('legdet')], lineAbove: 'light', pin: 'bottom' }
   ] },
   minimal: { name: 'Minimal', rows: [
-    { cells: [blk('header', { align: 'center', rel: 0.82, textcase: 'upper' })] },
+    { cells: [blk('header', { align: 'center', rel: 0.82, textcase: 'upper', withSub: true })] },
     { cells: [blk('name', { rel: 1.35 })] },
     { cells: [blk('fields', { style: 'plain', keys: ['familie'], textcase: 'smallcaps' })] },
     { cells: [blk('fields', { style: 'plain', keys: NO_FAM, auto: true })] },
@@ -159,7 +161,11 @@ function renderDesign(d, rec, edit, look) {
   const ph = t => edit ? `<span class="ph">${esc(t)}</span>` : '';
   const content = c => {
     switch (c.type) {
-      case 'header': return `${esc(s.title || 'Herbarium')}${s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}`;
+      case 'header': { // own text, otherwise the Header of the label settings
+        const title = (c.text || '').trim() || s.title || 'Herbarium';
+        return `${esc(title)}${c.withSub && s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}`;
+      }
+      case 'subheader': return esc((c.text || '').trim() || s.subtitle || '') || ph('[Subheader: set it here or in the label settings]');
       case 'name': {
         const art = text(rec, 'art');
         if (!art && !s.showEmpty) return ph('[Scientific name]');
@@ -180,7 +186,7 @@ function renderDesign(d, rec, edit, look) {
         return p.join(',&nbsp;&nbsp; ') || ph('[Leg. / Det.]');
       }
       case 'text': return esc(c.text || '') || ph('[Text]');
-      case 'line': return `<div class="dline al-${c.align || 'left'}" style="width:${Math.max(5, Math.min(100, +c.linewidth || 100))}%"></div>`;
+      case 'line': return `<div class="dline al-${c.align || 'left'}" style="width:${Math.max(5, Math.min(100, +c.linewidth || 100))}%${c.thick ? `;border-top-width:${+c.thick}pt` : ''}"></div>`;
       case 'blank': return ph('empty field');
       default: return '';
     }
@@ -195,7 +201,8 @@ function renderDesign(d, rec, edit, look) {
     const bottom = r.pin === 'bottom';
     const cls = ['drow', r.lineAbove ? 'la-' + r.lineAbove : '', r.lineBelow ? 'lb-' + r.lineBelow : '', empty ? 'empty' : '', bottom ? 'pin-b' : '', bottom && firstBottom ? 'pin-first' : ''].filter(Boolean).join(' ');
     if (bottom && !empty) firstBottom = false;
-    h += `<div class="${cls}">${inner}</div>`;
+    const rst = [r.lineAbove && r.aboveW ? `border-top-width:${+r.aboveW}pt` : '', r.lineBelow && r.belowW ? `border-bottom-width:${+r.belowW}pt` : ''].filter(Boolean).join(';');
+    h += `<div class="${cls}"${rst ? ` style="${rst}"` : ''}>${inner}</div>`;
   });
   if (edit) h += `<div class="dz" data-at="${d.rows.length}"></div>`;
   (d.images || []).forEach((im, ii) => {

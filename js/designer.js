@@ -9,14 +9,15 @@ const stage = $('#dg-stage');
 const props = $('#dg-props');
 const ed = { d: null, sel: null, rec: 0 };   // working copy; selection {kind:'cell',r,c} or {kind:'img',i}
 let drag = null, resizing = false;
-const TYPE_NAMES = { header: 'Header', name: 'Scientific name', nr: 'Specimen no.', fields: 'Fields', legdet: 'Leg. / Det.', text: 'Free text', line: 'Line', blank: 'Empty field' };
+const TYPE_NAMES = { header: 'Header', subheader: 'Subheader', name: 'Scientific name', nr: 'Specimen no.', fields: 'Fields', legdet: 'Leg. / Det.', text: 'Free text', line: 'Line', blank: 'Empty field' };
 const FRAMES = ['none', 'classic', 'thin', 'double', 'inset', 'rounded', 'corners', 'dashed'];
-const TEXTURES = ['none', 'paper', 'parchment', 'linen', 'leaves', 'dots', 'ruled', 'grid', 'hatch'];
+const TEXTURES = ['none', 'paper', 'linen', 'dots', 'ruled', 'grid', 'hatch'];
+const OLD_TEXTURES = { parchment: 'paper', leaves: 'none' }; // removed in 1.1
 
 // turns a ready-made layout into an editable design: sizes in pt, field lists written out, look attached
 function toEditable(d, look) {
   const base = +look.size || 10;
-  d.v = 2; // sizes are in pt from here on
+  d.v = 3; // sizes are in pt from here on; header and subheader are separate blocks
   d.look = Object.assign({}, look);
   d.customFields = d.customFields || [];
   d.images = d.images || [];
@@ -24,6 +25,23 @@ function toEditable(d, look) {
     if (c.rel != null) { if (c.rel !== 1) c.size = Math.round(c.rel * base * 2) / 2; delete c.rel; }
     if (c.type === 'fields') { c.keys = fieldsKeys(c); delete c.auto; }
   }));
+  // a header that also printed the subheader becomes two blocks: header and subheader below it
+  const rows = [];
+  d.rows.forEach(r => {
+    rows.push(r);
+    const hd = r.cells.find(c => c.type === 'header' && c.withSub);
+    r.cells.forEach(c => { delete c.withSub; delete c.sub; });
+    if (!hd || !state.settings.subtitle) return;
+    const sub = blk('subheader', { size: Math.round((hd.size || base) * 0.9 * 2) / 2 });
+    if (hd.align) sub.align = hd.align;
+    if (hd.color) sub.color = hd.color;
+    const nr = { cells: [sub] };
+    if (r.lineBelow) { nr.lineBelow = r.lineBelow; delete r.lineBelow; }
+    if (r.belowW) { nr.belowW = r.belowW; delete r.belowW; }
+    if (r.pin) nr.pin = r.pin;
+    rows.push(nr);
+  });
+  d.rows = rows;
   return d;
 }
 // rows pinned to the bottom always come last
@@ -82,6 +100,19 @@ $('#dg-look').addEventListener('click', e => {
 });
 $('#dg-guides').addEventListener('change', e => stage.classList.toggle('noguides', !e.target.checked));
 
+// list of images in the left panel: select or remove an image even when it is hard to reach on the label
+function renderImageList() {
+  const imgs = ed.d.images || [];
+  $('#dg-imgs').innerHTML = imgs.map((im, i) => `<div class="dg-imgrow ${ed.sel && ed.sel.kind === 'img' && ed.sel.i === i ? 'on' : ''}" data-i="${i}" title="Select this image">
+    <img src="${esc(im.src)}" alt=""><span>Image ${i + 1}</span><button type="button" class="dg-imgdel" data-del="${i}" title="Remove image">&#10005;</button></div>`).join('');
+}
+$('#dg-imgs').addEventListener('click', e => {
+  const del = e.target.closest('[data-del]');
+  if (del) { ed.d.images.splice(+del.dataset.del, 1); ed.sel = null; renderEditor(); return; }
+  const row = e.target.closest('.dg-imgrow'); if (!row) return;
+  ed.sel = { kind: 'img', i: +row.dataset.i }; renderEditor();
+});
+
 function labelSizeMm() {
   const s = state.settings, [pw, ph] = PAPER[s.paper] || PAPER.A4;
   return [(pw - 2 * s.margin - (s.cols - 1) * s.gap) / s.cols, (ph - 2 * s.margin - (s.rows - 1) * s.gap) / s.rows];
@@ -98,7 +129,9 @@ function renderEditor() {
   stage.innerHTML = `<div class="dg-page ${pageClass(look)}" style="${esc(pageStyle(look))};zoom:${zoom.toFixed(2)}">
     <div class="schild editing" style="width:${w.toFixed(2)}mm;height:${h.toFixed(2)}mm">${renderDesign(ed.d, rec, true, look)}</div></div>`;
   $('#dg-rec').textContent = state.records.length ? `${ed.rec + 1} / ${state.records.length}: ${text(rec, 'nr')} ${text(rec, 'art')}` : 'No data loaded';
+  stage.classList.toggle('noguides', !$('#dg-guides').checked);
   requestAnimationFrame(() => snapRuled(stage));
+  renderImageList();
   if (ed.sel && ed.sel.kind === 'cell') { const el = stage.querySelector(`.dcell[data-r="${ed.sel.r}"][data-c="${ed.sel.c}"]`); if (el) el.classList.add('sel'); else ed.sel = null; }
   if (ed.sel && ed.sel.kind === 'img') { const el = stage.querySelector(`.dimg[data-img="${ed.sel.i}"]`); if (el) el.classList.add('sel'); else ed.sel = null; }
   renderProps();
@@ -114,6 +147,7 @@ function newBlock(type) {
   if (type === 'text') return blk('text', { text: 'Your text' });
   if (type === 'line') return blk('line', { linewidth: 100 });
   if (type === 'blank') return blk('blank', { h: 5 });
+  if (type === 'subheader') return blk('subheader', { align: 'center' });
   return blk(type);
 }
 $('#dg-blocks').addEventListener('dragstart', e => {
@@ -299,8 +333,12 @@ function renderProps() {
         <option value="plain" ${c.style === 'plain' ? 'selected' : ''}>Values only</option></select></label>`;
   }
   if (c.type === 'text') h += `<label>Text <textarea data-p="text" rows="2">${esc(c.text || '')}</textarea></label>`;
-  if (c.type === 'header') h += `<p class="hint tiny">The text comes from "Header" and "Subheader" in the label settings.</p>`;
-  if (c.type === 'line') h += `<label>Length (% of the block) <input type="number" min="5" max="100" step="1" data-p="linewidth" value="${c.linewidth || 100}"></label>`;
+  if (c.type === 'header') h += `<label>Text <input type="text" data-p="text" maxlength="120" value="${esc(c.text || '')}" placeholder="${esc(state.settings.title || 'Herbarium')}"></label>
+    <p class="hint tiny">Leave empty to use "Header" from the label settings.</p>`;
+  if (c.type === 'subheader') h += `<label>Text <input type="text" data-p="text" maxlength="120" value="${esc(c.text || '')}" placeholder="${esc(state.settings.subtitle || '')}"></label>
+    <p class="hint tiny">Leave empty to use "Subheader" from the label settings.</p>`;
+  if (c.type === 'line') h += `<div class="two"><label>Length (% of block) <input type="number" min="5" max="100" step="1" data-p="linewidth" value="${c.linewidth || 100}"></label>
+    <label>Thickness (pt) <input type="number" min="0.25" max="6" step="0.25" data-p="thick" value="${c.thick || 0.75}"></label></div>`;
   if (!['line', 'blank'].includes(c.type)) {
     h += `<div class="two"><label>Size (pt) <input type="number" min="4" max="40" step="0.5" data-p="size" value="${curSize}"></label>
       <label>Colour <input type="color" data-p="color" value="${/^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#000000'}"></label></div>
@@ -324,7 +362,9 @@ function renderProps() {
   h += `<h3 class="sub">Row</h3>
     <div class="field-label">Position</div><div class="dg-toggles">${seg('pin', row.pin === 'bottom' ? 'bottom' : 'top', [['top', 'Pin to top'], ['bottom', 'Pin to bottom']])}</div>
     <div class="two"><label>Line above ${lineSel('lineAbove', row.lineAbove)}</label>
-    <label>Line below ${lineSel('lineBelow', row.lineBelow)}</label></div>
+    <label>Thickness (pt) <input type="number" min="0.25" max="6" step="0.25" data-rn="aboveW" value="${row.aboveW || 0.75}" ${row.lineAbove ? '' : 'disabled'}></label></div>
+    <div class="two"><label>Line below ${lineSel('lineBelow', row.lineBelow)}</label>
+    <label>Thickness (pt) <input type="number" min="0.25" max="6" step="0.25" data-rn="belowW" value="${row.belowW || 0.75}" ${row.lineBelow ? '' : 'disabled'}></label></div>
     <div class="row gap wrap">
       <button type="button" class="btn small ghost" data-act="up">&#8593; Row up</button>
       <button type="button" class="btn small ghost" data-act="down">&#8595; Row down</button>
@@ -341,7 +381,7 @@ function refreshStage() {
   renderEditor();
   if (active) {
     props.innerHTML = keep; initKeyDrag();
-    const sel = ['p', 'ip', 'rp'].map(k => active.dataset[k] && `[data-${k}="${active.dataset[k]}"]`).find(Boolean);
+    const sel = ['p', 'ip', 'rp', 'rn'].map(k => active.dataset[k] && `[data-${k}="${active.dataset[k]}"]`).find(Boolean);
     const el = sel && props.querySelector(sel);
     if (el) { el.value = active.value; if (active.type === 'checkbox') el.checked = active.checked; el.focus(); }
   }
@@ -385,7 +425,12 @@ props.addEventListener('input', e => {
     if (k === 'textcase' && !t.value) delete c[k];
     if (k === 'style') renderEditor(); else refreshStage();
   }
-  if (t.dataset.rp) { const row = ed.d.rows[ed.sel.r]; if (t.value) row[t.dataset.rp] = t.value; else delete row[t.dataset.rp]; refreshStage(); }
+  if (t.dataset.rp) { const row = ed.d.rows[ed.sel.r]; if (t.value) row[t.dataset.rp] = t.value; else delete row[t.dataset.rp]; renderEditor(); }
+  if (t.dataset.rn) {
+    const row = ed.d.rows[ed.sel.r], v = parseFloat(t.value);
+    if (isFinite(v)) row[t.dataset.rn] = Math.min(+t.max, Math.max(+t.min, v));
+    refreshStage();
+  }
 });
 props.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'dg-colname') { e.preventDefault(); addColumn(); } });
 function addColumn() {
@@ -435,14 +480,14 @@ ddlg.addEventListener('keydown', e => {
 function sanitizeDesign(d, oldLook) {
   const str = (v, n) => String(v == null ? '' : v).slice(0, n);
   const num = (v, a, b, def) => { const x = parseFloat(v); return isFinite(x) ? Math.min(b, Math.max(a, x)) : def; };
-  const v2 = d && d.v === 2;
+  const v2 = d && d.v >= 2, v3 = d && d.v >= 3;
   const look = Object.assign(sidebarLook(), (d && d.look) || oldLook || {});
-  const out = { v: 2, name: str(d && d.name, 80) || 'Imported design', rows: [], images: [], customFields: [], look: {
+  const out = { v: 3, name: str(d && d.name, 80) || 'Imported design', rows: [], images: [], customFields: [], look: {
     font: [...$('#s-font').options].some(o => o.value === look.font) ? look.font : DEFAULT_SETTINGS.font,
     size: num(look.size, 5, 30, 10),
     frame: FRAMES.includes(look.frame) ? look.frame : 'classic',
     bg: /^#[0-9a-f]{6}$/i.test(look.bg || '') ? look.bg : '#ffffff',
-    texture: TEXTURES.includes(look.texture) ? look.texture : 'none'
+    texture: TEXTURES.includes(OLD_TEXTURES[look.texture] || look.texture) ? (OLD_TEXTURES[look.texture] || look.texture) : 'none'
   } };
   const okKey = k => typeof k === 'string' && (BODY_FIELDS[k] || /^col:.{1,60}$/.test(k));
   let bottom = false;
@@ -458,7 +503,9 @@ function sanitizeDesign(d, oldLook) {
         if (!Array.isArray(c.keys)) o.auto = true;
       }
       if (c.type === 'text') o.text = str(c.text, 500);
-      if (c.type === 'line') o.linewidth = num(c.linewidth, 5, 100, 100);
+      if ((c.type === 'header' || c.type === 'subheader') && str(c.text, 120).trim()) o.text = str(c.text, 120);
+      if (c.type === 'header' && (v3 ? c.withSub === true : true)) o.withSub = true; // before v3 the header block also printed the subheader
+      if (c.type === 'line') { o.linewidth = num(c.linewidth, 5, 100, 100); if (c.thick != null) o.thick = num(c.thick, 0.25, 6, 0.75); }
       if (v2 && c.size != null) o.size = num(c.size, 4, 40, out.look.size);
       if (!v2 && c.size != null && +c.size !== 1) o.size = Math.round(num(c.size, 0.4, 3, 1) * out.look.size * 2) / 2;
       if (c.type !== 'fields' && c.type !== 'field' && c.label != null) o.label = !!c.label;
@@ -476,6 +523,8 @@ function sanitizeDesign(d, oldLook) {
     if (!cells.length) return;
     const row = { cells };
     ['lineAbove', 'lineBelow'].forEach(k => { if (['dark', 'light'].includes(r[k])) row[k] = r[k]; });
+    if (row.lineAbove && r.aboveW != null) row.aboveW = num(r.aboveW, 0.25, 6, 0.75);
+    if (row.lineBelow && r.belowW != null) row.belowW = num(r.belowW, 0.25, 6, 0.75);
     if (r.pin === 'bottom' || bottom) row.pin = 'bottom';
     out.rows.push(row);
   });
@@ -489,7 +538,7 @@ function sanitizeDesign(d, oldLook) {
   return out;
 }
 function exportDesign(d) {
-  const data = { herbie: 'label-design', version: 2, design: sanitizeDesign(d) };
+  const data = { herbie: 'label-design', version: 3, design: sanitizeDesign(d) };
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   a.download = `${(data.design.name || 'design').replace(/[^\w\-]+/g, '_')}.herbie.json`;

@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/logo-small.png">
   <link rel="apple-touch-icon" href="assets/logo-small.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.2">
 </head>
 <body>
   <header class="app-header">
@@ -109,7 +109,6 @@
           <label>Date format
             <select id="s-datefmt">
               <option value="dmy">DD.MM.YYYY</option>
-              <option value="roman">D.M.YYYY, month in Roman numerals</option>
               <option value="iso">YYYY-MM-DD (ISO 8601)</option>
               <option value="long">D Month YYYY (written out)</option>
             </select>
@@ -139,13 +138,13 @@
           <label>Frame
             <select id="s-frame">
               <option value="none">No frame</option>
+              <option value="dashed">Dashed (cut line)</option>
               <option value="classic">Classic line</option>
               <option value="thin">Thin line</option>
               <option value="double">Double line</option>
               <option value="inset">Inner frame</option>
               <option value="rounded">Rounded</option>
               <option value="corners">Corner marks</option>
-              <option value="dashed">Dashed (cut line)</option>
             </select>
           </label>
           <div class="field-label">Background</div>
@@ -165,9 +164,7 @@
           <div class="textures">
             <button type="button" class="tex-tile" data-tex="none"><span>None</span></button>
             <button type="button" class="tex-tile tx-paper" data-tex="paper"><span>Paper</span></button>
-            <button type="button" class="tex-tile tx-parchment" data-tex="parchment"><span>Parchment</span></button>
             <button type="button" class="tex-tile tx-linen" data-tex="linen"><span>Linen</span></button>
-            <button type="button" class="tex-tile tx-leaves" data-tex="leaves"><span>Leaves</span></button>
             <button type="button" class="tex-tile tx-dots" data-tex="dots"><span>Dots</span></button>
             <button type="button" class="tex-tile tx-ruled" data-tex="ruled"><span>Ruled</span></button>
             <button type="button" class="tex-tile tx-grid" data-tex="grid"><span>Grid</span></button>
@@ -299,6 +296,7 @@
           <h3>Blocks</h3>
           <p class="hint tiny">Drag a block onto the label.</p>
           <div class="dg-add" draggable="true" data-add="header">Header</div>
+          <div class="dg-add" draggable="true" data-add="subheader">Subheader</div>
           <div class="dg-add" draggable="true" data-add="name">Scientific name</div>
           <div class="dg-add" draggable="true" data-add="nr">Specimen no.</div>
           <div class="dg-add" draggable="true" data-add="fields">Fields</div>
@@ -307,6 +305,7 @@
           <div class="dg-add" draggable="true" data-add="line">Line</div>
           <div class="dg-add" draggable="true" data-add="blank">Empty field</div>
           <label class="dg-add dg-img">+ Image or logo<input type="file" id="dg-img-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
+          <div id="dg-imgs" class="dg-imgs"></div>
         </div>
         <div id="dg-look" class="dg-look">
           <h3>Style</h3>
@@ -324,13 +323,13 @@
           <label>Frame
             <select id="dg-frame">
               <option value="none">No frame</option>
+              <option value="dashed">Dashed (cut line)</option>
               <option value="classic">Classic line</option>
               <option value="thin">Thin line</option>
               <option value="double">Double line</option>
               <option value="inset">Inner frame</option>
               <option value="rounded">Rounded</option>
               <option value="corners">Corner marks</option>
-              <option value="dashed">Dashed (cut line)</option>
             </select>
           </label>
           <div class="field-label">Background</div>
@@ -347,11 +346,12 @@
           </div>
           <label>Texture
             <select id="dg-tex">
-              <option value="none">None</option><option value="paper">Paper</option><option value="parchment">Parchment</option>
-              <option value="linen">Linen</option><option value="leaves">Leaves</option><option value="dots">Dots</option>
+              <option value="none">None</option><option value="paper">Paper</option>
+              <option value="linen">Linen</option><option value="dots">Dots</option>
               <option value="ruled">Ruled</option><option value="grid">Grid</option><option value="hatch">Hatch</option>
             </select>
           </label>
+          <label class="dg-guides"><input type="checkbox" id="dg-guides" checked> Show guides</label>
         </div>
       </aside>
       <div class="dg-center">
@@ -360,7 +360,6 @@
           <button class="btn small ghost" id="dg-prev" title="Previous specimen">&#8592;</button>
           <span id="dg-rec"></span>
           <button class="btn small ghost" id="dg-next" title="Next specimen">&#8594;</button>
-          <label class="dg-guides"><input type="checkbox" id="dg-guides" checked> Show guides</label>
         </div>
       </div>
       <aside class="dg-right" id="dg-props"></aside>
@@ -383,10 +382,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/core.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/editor.js"></script>
-  <script src="js/labels.js"></script>
-  <script src="js/designer.js"></script>
+  <script src="js/core.js?v=1.2"></script>
+  <script src="js/data.js?v=1.2"></script>
+  <script src="js/editor.js?v=1.2"></script>
+  <script src="js/labels.js?v=1.2"></script>
+  <script src="js/designer.js?v=1.2"></script>
 </body>
 </html>

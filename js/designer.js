@@ -378,9 +378,13 @@ function selCell() { return ed.sel && ed.sel.kind === 'cell' && ed.d.rows[ed.sel
 function refreshStage() {
   const active = document.activeElement && props.contains(document.activeElement) ? document.activeElement : null;
   const keep = props.innerHTML;
+  // innerHTML keeps only the starting values, so the current state of every input is copied back by position
+  const live = [...props.querySelectorAll('input, select, textarea')].map(el => ({ v: el.value, c: el.checked }));
   renderEditor();
   if (active) {
-    props.innerHTML = keep; initKeyDrag();
+    props.innerHTML = keep;
+    props.querySelectorAll('input, select, textarea').forEach((el, i) => { if (live[i]) { if (el.type === 'checkbox') el.checked = live[i].c; else if (el.type !== 'file') el.value = live[i].v; } });
+    initKeyDrag();
     const sel = ['p', 'ip', 'rp', 'rn'].map(k => active.dataset[k] && `[data-${k}="${active.dataset[k]}"]`).find(Boolean);
     const el = sel && props.querySelector(sel);
     if (el) { el.value = active.value; if (active.type === 'checkbox') el.checked = active.checked; el.focus(); }

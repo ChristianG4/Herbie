@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/logo-small.png">
   <link rel="apple-touch-icon" href="assets/logo-small.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=1.5">
+  <link rel="stylesheet" href="style.css?v=1.8">
 </head>
 <body>
   <header class="app-header">
@@ -91,6 +91,7 @@
             <button class="btn small" id="btn-open-data">View / edit data</button>
           </div>
 
+          <div class="preset-only">
           <h2>Label</h2>
           <label>Label language <select id="s-lang"></select></label>
           <label>Header <input type="text" id="s-title" placeholder="Herbarium First Last"></label>
@@ -125,6 +126,7 @@
           <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash
             <span class="info-i" tabindex="0" data-tip='Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". Fields shown as values only always leave empty fields out.'>i</span>
           </label>
+          </div>
 
           <h2>Design</h2>
           <div class="field-label">Layout</div>
@@ -172,7 +174,7 @@
             <button type="button" class="tex-tile tx-hatch" data-tex="hatch"><span>Hatch</span></button>
           </div>
           </div>
-          <p class="hint tiny own-only">Font, frame, background and texture of your own design are set in the designer.</p>
+          <p class="hint tiny own-only">Language, header, subheader, date and coordinate format, font, frame, background and texture of your own design are set in the designer and saved with it.</p>
 
           <div class="design-box">
             <button type="button" class="btn small" id="btn-design">Create design</button>
@@ -308,6 +310,12 @@
           <label class="dg-add dg-img">+ Image or logo<input type="file" id="dg-img-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
           <div id="dg-imgs" class="dg-imgs"></div>
         </div>
+        <div id="dg-label" class="dg-look">
+          <h3>Label</h3>
+          <label>Label language <select id="dg-lang"></select></label>
+          <label class="dg-guides"><input type="checkbox" id="dg-empty"> Print empty fields with a dash
+            <span class="info-i" tabindex="0" data-tip='Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". Fields shown as values only always leave empty fields out.'>i</span></label>
+        </div>
         <div id="dg-look" class="dg-look">
           <h3>Style</h3>
           <div class="two">
@@ -383,10 +391,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/core.js?v=1.5"></script>
-  <script src="js/data.js?v=1.5"></script>
-  <script src="js/editor.js?v=1.5"></script>
-  <script src="js/labels.js?v=1.5"></script>
-  <script src="js/designer.js?v=1.5"></script>
+  <script src="js/core.js?v=1.8"></script>
+  <script src="js/data.js?v=1.8"></script>
+  <script src="js/editor.js?v=1.8"></script>
+  <script src="js/labels.js?v=1.8"></script>
+  <script src="js/designer.js?v=1.8"></script>
 </body>
 </html>

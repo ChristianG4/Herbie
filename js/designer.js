@@ -17,7 +17,9 @@ const OLD_TEXTURES = { parchment: 'paper', leaves: 'none' }; // removed in 1.1
 // turns a ready-made layout into an editable design: sizes in pt, field lists written out, look attached
 function toEditable(d, look) {
   const base = +look.size || 10;
-  d.v = 3; // sizes are in pt from here on; header and subheader are separate blocks
+  if (!(d.v >= 4)) { d.rows.forEach(r => r.cells.forEach(c => { if (c.rel != null) { if (c.rel !== 1) c.size = Math.round(c.rel * base * 2) / 2; delete c.rel; } })); fillFromLabel(d, state.settings, base); }
+  d.v = 4; // sizes in pt; texts and formats in the blocks
+  d.label = Object.assign(sidebarLabel(), d.label || {});
   d.look = Object.assign({}, look);
   d.customFields = d.customFields || [];
   d.images = d.images || [];
@@ -25,14 +27,25 @@ function toEditable(d, look) {
     if (c.rel != null) { if (c.rel !== 1) c.size = Math.round(c.rel * base * 2) / 2; delete c.rel; }
     if (c.type === 'fields') { c.keys = fieldsKeys(c); delete c.auto; }
   }));
-  // a header that also printed the subheader becomes two blocks: header and subheader below it
+  return d;
+}
+// older designs and ready-made layouts took header, subheader and formats from the label settings (src);
+// they are written into the blocks, and a header that also printed the subheader becomes two blocks
+function fillFromLabel(d, src, base) {
+  const ok = (id, v) => [...$(id).options].some(o => o.value === v);
+  const df = src.datefmt === 'roman' ? 'dmy' : src.datefmt;
+  d.rows.forEach(r => r.cells.forEach(c => {
+    if (c.type === 'header' && !c.text) c.text = String(src.title || '').slice(0, 120);
+    if (c.type === 'subheader' && !c.text) c.text = String(src.subtitle || '').slice(0, 120);
+    if (c.type === 'fields') { if (!c.datefmt && ok('#s-datefmt', df)) c.datefmt = df; if (!c.coordfmt && ok('#s-coordfmt', src.coordfmt)) c.coordfmt = src.coordfmt; }
+  }));
   const rows = [];
   d.rows.forEach(r => {
     rows.push(r);
     const hd = r.cells.find(c => c.type === 'header' && c.withSub);
     r.cells.forEach(c => { delete c.withSub; delete c.sub; });
-    if (!hd || !state.settings.subtitle) return;
-    const sub = blk('subheader', { size: Math.round((hd.size || base) * 0.9 * 2) / 2 });
+    if (!hd || !src.subtitle) return;
+    const sub = blk('subheader', { text: String(src.subtitle).slice(0, 120), size: Math.round((hd.size || base) * 0.9 * 2) / 2 });
     if (hd.align) sub.align = hd.align;
     if (hd.color) sub.color = hd.color;
     const nr = { cells: [sub] };
@@ -42,7 +55,6 @@ function toEditable(d, look) {
     rows.push(nr);
   });
   d.rows = rows;
-  return d;
 }
 // rows pinned to the bottom always come last
 function orderRows(d) { d.rows = d.rows.filter(r => r.pin !== 'bottom').concat(d.rows.filter(r => r.pin === 'bottom')); }
@@ -55,7 +67,7 @@ function openDesigner() {
   ed.sel = null;
   ed.rec = Math.max(0, state.records.indexOf(sortedRecords()[0] || state.records[0]));
   $('#dg-name').value = ed.d.name || '';
-  lookToForm();
+  lookToForm(); labelToForm();
   ddlg.showModal();
   renderEditor();
 }
@@ -72,12 +84,27 @@ $('#dg-apply').addEventListener('click', () => {
 $('#dg-preset').addEventListener('change', e => {
   const p = PRESETS[e.target.value]; e.target.value = '';
   if (!p) return;
-  const keep = { images: ed.d.images, look: ed.d.look, customFields: ed.d.customFields };
+  const keep = { images: ed.d.images, look: ed.d.look, customFields: ed.d.customFields, label: ed.d.label };
   ed.d = toEditable(clone(p), keep.look);
   Object.assign(ed.d, keep, { name: $('#dg-name').value || 'My design' });
   ed.sel = null;
   renderEditor();
 });
+
+// ---- label settings of the design (language, header, formats); they replace the sidebar while the design is used
+function sidebarLabel() { const s = state.settings; return { lang: s.lang, showEmpty: !!s.showEmpty }; }
+$('#dg-lang').innerHTML = Object.entries(TEXT).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
+function labelToForm() {
+  const L = ed.d.label;
+  $('#dg-lang').value = L.lang; $('#dg-empty').checked = !!L.showEmpty;
+}
+const readLabel = () => {
+  const L = ed.d.label;
+  L.lang = $('#dg-lang').value; L.showEmpty = $('#dg-empty').checked;
+  renderEditor();
+};
+$('#dg-label').addEventListener('input', readLabel);
+$('#dg-label').addEventListener('change', readLabel);
 
 // ---- look of the design (font, size, frame, background, texture)
 function lookToForm() {
@@ -293,6 +320,12 @@ function fieldOptions() {
   return out;
 }
 function colAvailable(k) { return !k.startsWith('col:') || !!(state.custom.find(o => (o.name || '').toLowerCase() === k.slice(4).toLowerCase()) || state.headers.find(h => h.toLowerCase() === k.slice(4).toLowerCase())); }
+// date or coordinate format of a fields block; the choices are the same as in the label settings
+function fmtSelect(k, sidebarId, title, c, show) {
+  const cur = c[k] || (k === 'datefmt' ? 'dmy' : 'dec');
+  const opts = [...$('#' + sidebarId).options].map(o => `<option value="${o.value}" ${cur === o.value ? 'selected' : ''}>${esc(o.textContent)}</option>`).join('');
+  return `<label class="dg-fmt" data-fmt="${k}" ${show ? '' : 'hidden'}>${title} <select data-p="${k}">${opts}</select></label>`;
+}
 function renderProps() {
   if (!ed.sel) {
     props.innerHTML = `<h3>Edit the label</h3><p class="hint">Click a block on the label to change it.</p>
@@ -327,16 +360,15 @@ function renderProps() {
       }).join('')}</ul>
       <div class="dg-addcol"><input type="text" id="dg-colname" placeholder="Column name, e.g. Plant height"><button type="button" class="btn small" data-act="add-col">Add</button></div>
       <p class="hint tiny">A column name is saved with the design. Tables with a column of that name (upper or lower case does not matter) show it automatically.</p>
+      ${fmtSelect('datefmt', 's-datefmt', 'Date format', c, keys.includes('datum'))}
+      ${fmtSelect('coordfmt', 's-coordfmt', 'Coordinate format', c, keys.includes('coords'))}
       <label>Style <select data-p="style">
         <option value="inline" ${c.style === 'inline' ? 'selected' : ''}>Name: value</option>
         <option value="table" ${c.style === 'table' ? 'selected' : ''}>Table (names in a column)</option>
         <option value="plain" ${c.style === 'plain' ? 'selected' : ''}>Values only</option></select></label>`;
   }
   if (c.type === 'text') h += `<label>Text <textarea data-p="text" rows="2">${esc(c.text || '')}</textarea></label>`;
-  if (c.type === 'header') h += `<label>Text <input type="text" data-p="text" maxlength="120" value="${esc(c.text || '')}" placeholder="${esc(state.settings.title || 'Herbarium')}"></label>
-    <p class="hint tiny">Leave empty to use "Header" from the label settings.</p>`;
-  if (c.type === 'subheader') h += `<label>Text <input type="text" data-p="text" maxlength="120" value="${esc(c.text || '')}" placeholder="${esc(state.settings.subtitle || '')}"></label>
-    <p class="hint tiny">Leave empty to use "Subheader" from the label settings.</p>`;
+  if (c.type === 'header' || c.type === 'subheader') h += `<label>Text <input type="text" data-p="text" maxlength="120" value="${esc(c.text || '')}" placeholder="${c.type === 'header' ? 'Herbarium First Last' : 'e.g. Flora of Hesse'}"></label>`;
   if (c.type === 'line') h += `<div class="two"><label>Length (% of block) <input type="number" min="5" max="100" step="1" data-p="linewidth" value="${c.linewidth || 100}"></label>
     <label>Thickness (pt) <input type="number" min="0.25" max="6" step="0.25" data-p="thick" value="${c.thick || 0.75}"></label></div>`;
   if (!['line', 'blank'].includes(c.type)) {
@@ -394,6 +426,7 @@ function refreshStage() {
 function readKeys() {
   const c = selCell(); if (!c) return;
   c.keys = $$('#dg-keys li').filter(li => li.querySelector('input').checked).map(li => li.dataset.key);
+  [['datefmt', 'datum'], ['coordfmt', 'coords']].forEach(([f, key]) => { const el = props.querySelector(`[data-fmt="${f}"]`); if (el) el.hidden = !c.keys.includes(key); });
 }
 function initKeyDrag() {
   const ul = $('#dg-keys'); if (!ul) return;
@@ -426,7 +459,7 @@ props.addEventListener('input', e => {
       if (t.value === '' && (k === 'w' || k === 'h')) delete c[k];
       else if (isFinite(v)) { c[k] = Math.min(+t.max, Math.max(+t.min, v)); if (k === 'size') delete c.rel; if (k === 'w') delete c.width; }
     } else c[k] = t.value;
-    if (k === 'textcase' && !t.value) delete c[k];
+    if (['textcase', 'datefmt', 'coordfmt'].includes(k) && !t.value) delete c[k];
     if (k === 'style') renderEditor(); else refreshStage();
   }
   if (t.dataset.rp) { const row = ed.d.rows[ed.sel.r]; if (t.value) row[t.dataset.rp] = t.value; else delete row[t.dataset.rp]; renderEditor(); }
@@ -484,9 +517,9 @@ ddlg.addEventListener('keydown', e => {
 function sanitizeDesign(d, oldLook) {
   const str = (v, n) => String(v == null ? '' : v).slice(0, n);
   const num = (v, a, b, def) => { const x = parseFloat(v); return isFinite(x) ? Math.min(b, Math.max(a, x)) : def; };
-  const v2 = d && d.v >= 2, v3 = d && d.v >= 3;
+  const v2 = d && d.v >= 2, v3 = d && d.v >= 3, v4 = d && d.v >= 4;
   const look = Object.assign(sidebarLook(), (d && d.look) || oldLook || {});
-  const out = { v: 3, name: str(d && d.name, 80) || 'Imported design', rows: [], images: [], customFields: [], look: {
+  const out = { v: 4, name: str(d && d.name, 80) || 'Imported design', rows: [], images: [], customFields: [], look: {
     font: [...$('#s-font').options].some(o => o.value === look.font) ? look.font : DEFAULT_SETTINGS.font,
     size: num(look.size, 5, 30, 10),
     frame: FRAMES.includes(look.frame) ? look.frame : 'classic',
@@ -505,10 +538,13 @@ function sanitizeDesign(d, oldLook) {
         o.keys = Array.isArray(c.keys) ? c.keys.filter(okKey).slice(0, 40) : DEFAULT_KEYS.slice();
         o.style = ['inline', 'table', 'plain'].includes(c.style) ? c.style : 'inline';
         if (!Array.isArray(c.keys)) o.auto = true;
+        const dfm = c.datefmt === 'roman' ? 'dmy' : c.datefmt;
+        if ([...$('#s-datefmt').options].some(x => x.value === dfm)) o.datefmt = dfm;
+        if ([...$('#s-coordfmt').options].some(x => x.value === c.coordfmt)) o.coordfmt = c.coordfmt;
       }
       if (c.type === 'text') o.text = str(c.text, 500);
-      if ((c.type === 'header' || c.type === 'subheader') && str(c.text, 120).trim()) o.text = str(c.text, 120);
-      if (c.type === 'header' && (v3 ? c.withSub === true : true)) o.withSub = true; // before v3 the header block also printed the subheader
+      if ((c.type === 'header' || c.type === 'subheader') && c.text) o.text = str(c.text, 120);
+      if (c.type === 'header' && !v4 && (v3 ? c.withSub === true : true)) o.withSub = true; // before v3 the header block also printed the subheader
       if (c.type === 'line') { o.linewidth = num(c.linewidth, 5, 100, 100); if (c.thick != null) o.thick = num(c.thick, 0.25, 6, 0.75); }
       if (v2 && c.size != null) o.size = num(c.size, 4, 40, out.look.size);
       if (!v2 && c.size != null && +c.size !== 1) o.size = Math.round(num(c.size, 0.4, 3, 1) * out.look.size * 2) / 2;
@@ -536,13 +572,18 @@ function sanitizeDesign(d, oldLook) {
     if (!im || !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(im.src || '')) return;
     out.images.push({ src: im.src, x: num(im.x, -50, 150, 0), y: num(im.y, -50, 150, 0), w: num(im.w, 1, 100, 20), opacity: num(im.opacity, 0, 1, 1), behind: !!im.behind });
   });
+  // language and empty fields belong to the design; designs from before version 4 take header, subheader
+  // and formats from their old label settings or, if they had none, from the current sidebar
+  const lab = Object.assign({}, state.settings, (d && d.label) || {});
+  out.label = { lang: TEXT[lab.lang] ? lab.lang : 'en', showEmpty: !!lab.showEmpty };
+  if (!v4) fillFromLabel(out, lab, out.look.size);
   ((d && d.customFields) || []).slice(0, 30).forEach(n => { n = str(n, 60).trim(); if (n && !out.customFields.some(x => x.toLowerCase() === n.toLowerCase())) out.customFields.push(n); });
   if (!out.rows.length) out.rows = toEditable(clone(PRESETS.classic), out.look).rows;
   orderRows(out);
   return out;
 }
 function exportDesign(d) {
-  const data = { herbie: 'label-design', version: 3, design: sanitizeDesign(d) };
+  const data = { herbie: 'label-design', version: 4, design: sanitizeDesign(d) };
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   a.download = `${(data.design.name || 'design').replace(/[^\w\-]+/g, '_')}.herbie.json`;
@@ -556,7 +597,7 @@ function importDesign(file, intoEditor) {
     try { data = JSON.parse(r.result); } catch (e) { /* handled below */ }
     if (!data || data.herbie !== 'label-design' || !data.design) { toast('This is not a Herbie design file'); return; }
     const d = sanitizeDesign(data.design, data.look);
-    if (intoEditor) { ed.d = d; ed.sel = null; $('#dg-name').value = d.name; lookToForm(); renderEditor(); }
+    if (intoEditor) { ed.d = toEditable(d, d.look); ed.sel = null; $('#dg-name').value = d.name; lookToForm(); labelToForm(); renderEditor(); }
     else { state.settings.customDesign = d; state.settings.layout = 'custom'; saveSettings(); applySettingsToForm(); renderPreview(); }
     toast(`Design "${d.name}" imported`);
   };

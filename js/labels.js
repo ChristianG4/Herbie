@@ -50,8 +50,8 @@ $('#btn-reset-settings').addEventListener('click', () => {
 // ================================================================ label designs
 // A design is a list of rows; each row holds blocks side by side. Images float freely on top.
 // Block types: header, subheader, name, nr, fields, legdet, text, line, blank (empty field).
-// header: own text or the Header of the label settings; withSub (ready-made layouts) also prints the Subheader below it.
-// subheader: own text or the Subheader of the label settings.
+// header, subheader: text stored in the block (own design) or taken from the label settings (ready-made layouts; withSub adds the subheader).
+// fields: datefmt and coordfmt stored in the block (own design).
 // Block options: size (pt; ready-made layouts use rel = factor of the base size), bold, italic, textcase,
 // color, align (left|center|right), valign (top|middle|bottom), w (% of the row), h (minimum height in mm).
 // Row options: lineAbove, lineBelow (dark|light), pin ('bottom' sticks the row to the bottom of the label).
@@ -159,15 +159,16 @@ function cellClass(c, base) {
 
 // renders a design for one record; edit = true adds hooks and placeholders for the designer
 function renderDesign(d, rec, edit, look) {
-  const s = state.settings, T = TEXT[s.lang] || TEXT.en, base = +look.size || 10;
+  // an own design brings its language and empty-field setting; texts and formats are stored in its blocks
+  const s = d.label ? Object.assign({}, state.settings, { datefmt: 'dmy', coordfmt: 'dec' }, d.label) : state.settings, T = TEXT[s.lang] || TEXT.en, base = +look.size || 10;
   const ph = t => edit ? `<span class="ph">${esc(t)}</span>` : '';
   const content = c => {
     switch (c.type) {
-      case 'header': { // own text, otherwise the Header of the label settings
-        const title = (c.text || '').trim() || s.title || 'Herbarium';
-        return `${esc(title)}${c.withSub && s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}`;
+      case 'header': { // own design: text of the block; ready-made layouts: header and subheader of the label settings
+        if (d.label) return esc(c.text || '') || ph('[Header: enter the text on the right]');
+        return `${esc(s.title || 'Herbarium')}${c.withSub && s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}`;
       }
-      case 'subheader': return esc((c.text || '').trim() || s.subtitle || '') || ph('[Subheader: set it here or in the label settings]');
+      case 'subheader': return esc(d.label ? c.text || '' : s.subtitle || '') || ph('[Subheader: enter the text on the right]');
       case 'name': {
         const art = text(rec, 'art');
         if (!art && !s.showEmpty) return ph('[Scientific name]');
@@ -270,7 +271,13 @@ function markOverflow() {
   requestAnimationFrame(() => {
     snapRuled($('#preview'));
     let n = 0;
-    $$('#preview .schild:not(.leer)').forEach(el => { const o = el.scrollHeight > el.clientHeight + 1; el.style.outline = o ? '2px solid #d9534f' : ''; if (o) n++; });
+    // overfull = some text reaches past the inner edge of the label; empty space of a block with a set height and images do not count
+    $$('#preview .schild:not(.leer)').forEach(el => {
+      const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+      const bottom = r.bottom - parseFloat(cs.borderBottomWidth || 0) + 1, right = r.right - parseFloat(cs.borderRightWidth || 0) + 1;
+      const o = [...el.querySelectorAll('.drow .cin')].some(c => { const b = c.getBoundingClientRect(); return b.height > 0 && (b.bottom > bottom || b.right > right); });
+      el.style.outline = o ? '2px solid #d9534f' : ''; if (o) n++;
+    });
     if (n) toast(`${n} label(s) overfull (marked red): use a smaller font or fewer rows per page.`, 4500);
   });
 }

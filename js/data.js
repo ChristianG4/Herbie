@@ -9,7 +9,10 @@ function showTab(name) {
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   $$('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
   if (was === 'tab-data' && name !== 'data') saveSession();
-  if (name === 'etiketten') renderPreview();
+  if (name === 'etiketten') {
+    if (state.rows.length && !state.sessionId && !state.sessionDeleted) { state.sessionId = newSessionId(); state.sessionSnap = null; saveSessionNow(); }
+    renderPreview();
+  }
   if (name === 'data') onDataTab();
   window.scrollTo({ top: 0 });
 }
@@ -97,8 +100,7 @@ function setData(headers, rows) {
   buildRecords();
   renderMapping();
   enableTabs(true);
-  state.sessionId = newSessionId(); // a new entry in "Recent tables"
-  saveSession();
+  state.sessionId = null; state.sessionDeleted = false; // becomes an entry in "Recent tables" once the labels are shown
   // stay on step 1: the user goes on with "Continue"
   $('#loaded-name').textContent = `${state.fileName || 'table'}, ${rows.length} rows`;
   $('#loaded').hidden = false;
@@ -366,7 +368,7 @@ $('#recent-list').addEventListener('click', async e => {
     if (!await confirmBox('Delete table?', `"${esc(x.name)}" and all changes made to it will be deleted from this browser. Use "Export table" first if you want to keep them.`, 'Delete')) return;
     removeKey(LS_SESSION_PREFIX + x.id);
     saveJSON(LS_SESSIONS, sessionList().filter(s => s.id !== x.id));
-    if (x.id === state.sessionId) state.sessionId = null; // the table stays open but is no longer saved
+    if (x.id === state.sessionId) { state.sessionId = null; state.sessionDeleted = true; } // the table stays open but is no longer saved
     renderRecent();
   }
 });

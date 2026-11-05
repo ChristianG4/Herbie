@@ -90,6 +90,11 @@ input:focus, select:focus { outline: 2px solid var(--green-soft); border-color: 
 .dropzone span { color: var(--muted); font-size: .9rem; }
 .dropzone.over, .dropzone:hover { border-color: var(--green-2); background: var(--green-soft); }
 
+.load-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.load-btns .btn { width: 100%; justify-content: center; }
+.drop-btn.over { border: 2px dashed var(--green-2); background: var(--green-soft); }
+.notice.ok { background: var(--green-soft); border-color: #c9dccb; }
+@media (max-width: 600px) { .load-btns { grid-template-columns: 1fr; } }
 .notice {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
   margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #fbf3e2; border: 1px solid #ecd9b3; font-size: .9rem;
@@ -409,7 +414,16 @@ legend { font-size: .82rem; color: var(--muted); padding: 0 4px; }
 .dg-stage.noguides .schild.editing .rs, .dg-stage.noguides .schild.editing .rh { opacity: 0; }
 .dg-stage.noguides .schild.editing .rs:hover, .dg-stage.noguides .schild.editing .rh:hover { opacity: .8; }
 .dg-stage.noguides .schild.editing .ph { visibility: hidden; }
-.dg-left .dg-guides-top { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-size: .85rem; color: var(--ink); }
+.dg-topline { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.dg-topline .spacer { flex: 1; }
+.dg-topline .btn { padding: 3px 9px; font-size: 1rem; line-height: 1.2; }
+.dg-tpl { display: flex; flex-direction: column; gap: 3px; font-size: .8rem; color: var(--muted); margin-bottom: 14px; }
+.dg-tpl select { padding: 5px 7px; font-size: .85rem; }
+.schild.editing .dz.dz-empty { height: auto; flex: 1; min-height: 60%; margin: 4px; display: flex; align-items: center; justify-content: center;
+  border: 2px dashed rgba(181,128,47,.5); border-radius: 6px; color: #9a927e; font: italic 1em system-ui, sans-serif; }
+.schild.editing .dz.dz-empty::before, .schild.editing .dz.dz-empty::after { display: none !important; }
+.schild.editing .dz.dz-empty.on { background: rgba(181,128,47,.12); }
+.dg-left .dg-guides-top { display: flex; align-items: center; gap: 6px; margin: 0; font-size: .85rem; color: var(--ink); }
 .dg-look label.dg-guides { flex-direction: row; align-items: center; gap: 6px; margin-top: 6px; color: var(--ink); font-size: .85rem; }
 .dg-stage.noguides .schild.editing .dcell:hover { background: none; }
 .dg-blocks, .dg-look { display: flex; flex-direction: column; gap: 6px; }

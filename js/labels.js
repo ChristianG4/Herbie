@@ -14,7 +14,6 @@ function applySettingsToForm() {
   // own designs (up to MAX_DESIGNS) appear next to the ready-made layouts; the cross removes one
   $('#own-layouts').innerHTML = s.designs.map((d, i) => `<span class="own-btn"><button type="button" data-layout="own:${i}">${esc(d.name || 'My design')}</button><button type="button" class="own-del" data-deldesign="${i}" title="Remove this design">&#10005;</button></span>`).join('');
   $$('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === s.layout));
-  $('#btn-design').textContent = own ? 'Edit design' : 'Create design';
   // label, look and page settings of an own design are set in the designer
   $$('.preset-only').forEach(el => { el.hidden = own; });
   $$('.own-only').forEach(el => { el.hidden = !own; });
@@ -49,7 +48,7 @@ $('.settings .seg').addEventListener('click', async e => {
     const cur = ownIndex();
     s.designs.splice(i, 1);
     if (cur === i) s.layout = 'classic'; else if (cur > i) s.layout = 'own:' + (cur - 1);
-    saveSettings(); applySettingsToForm(); renderPreview(); updateDesignList();
+    saveSettings(); applySettingsToForm(); renderPreview();
     return;
   }
   const b = e.target.closest('[data-layout]'); if (!b) return;
@@ -221,7 +220,7 @@ function renderDesign(d, rec, edit, look) {
     const rst = [r.lineAbove && r.aboveW ? `border-top-width:${+r.aboveW}pt` : '', r.lineBelow && r.belowW ? `border-bottom-width:${+r.belowW}pt` : ''].filter(Boolean).join(';');
     h += `<div class="${cls}"${rst ? ` style="${rst}"` : ''}>${inner}</div>`;
   });
-  if (edit) h += `<div class="dz" data-at="${d.rows.length}"></div>`;
+  if (edit) h += d.rows.length ? `<div class="dz" data-at="${d.rows.length}"></div>` : `<div class="dz dz-empty" data-at="0">Drag blocks from the left onto the label</div>`;
   (d.images || []).forEach((im, ii) => {
     h += `<img class="dimg ${im.behind ? 'behind' : ''}" src="${esc(im.src)}" alt="" style="left:${im.x}%;top:${im.y}%;width:${im.w}%;opacity:${im.opacity == null ? 1 : im.opacity}"${edit ? ` data-img="${ii}" draggable="false"` : ''}>`;
   });

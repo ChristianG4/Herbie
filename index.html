@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/logo-small.png">
   <link rel="apple-touch-icon" href="assets/logo-small.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=1.9">
+  <link rel="stylesheet" href="style.css?v=2.1">
 </head>
 <body>
   <header class="app-header">
@@ -40,15 +40,18 @@
           <label id="dropzone" class="dropzone">
             <input type="file" id="file-input" accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv">
             <strong>Drop an Excel or CSV file here</strong>
-            <span>or click to choose one (.xlsx, .xls, .ods, .csv)</span>
+            <span>or click to choose one (.xlsx, .xls, .ods, .csv). A design file (.herbie.json) can be dropped here too.</span>
           </label>
-          <div class="row gap wrap">
-            <button class="btn ghost" id="btn-template">Download empty template</button>
+          <div class="load-btns">
+            <button class="btn ghost" id="btn-template" title="Download an empty Excel template">Download template</button>
             <button class="btn ghost" id="btn-demo">Try example data</button>
-            <button class="btn ghost" id="btn-import-design-1">Import design</button>
+            <button class="btn ghost drop-btn" id="btn-import-design-1" title="Click to choose a design file (.herbie.json) or drop it here">Import design</button>
             <input type="file" id="design-file" accept=".json,application/json" hidden>
           </div>
-          <p class="hint tiny" id="design-list-1" hidden></p>
+          <div id="loaded" class="notice ok" hidden>
+            <span>Table loaded (<b id="loaded-name"></b>).</span>
+            <button class="btn small primary" id="btn-to-columns">Continue</button>
+          </div>
           <div id="resume" class="notice" hidden>
             <span>There is a saved session (<b id="resume-name"></b>).</span>
             <span class="row gap">
@@ -285,13 +288,6 @@
       <h2>Label designer</h2>
       <input type="text" id="dg-name" class="dg-name" placeholder="Name of your design" aria-label="Name of your design">
       <span class="spacer"></span>
-      <select id="dg-preset" aria-label="Start from a layout">
-        <option value="">Start from ...</option>
-        <option value="classic">Classic</option>
-        <option value="table">Table</option>
-        <option value="name">Name first</option>
-        <option value="minimal">Minimal</option>
-      </select>
       <button class="btn small ghost" id="dg-import">Import</button>
       <button class="btn small ghost" id="dg-export">Export</button>
       <input type="file" id="dg-file" accept=".json,application/json" hidden>
@@ -300,7 +296,10 @@
     </div>
     <div class="dg-body">
       <aside class="dg-left">
-        <label class="dg-guides dg-guides-top"><input type="checkbox" id="dg-guides"> Show guides</label>
+        <div class="dg-topline">
+          <label class="dg-guides dg-guides-top"><input type="checkbox" id="dg-guides"> Show guides</label>
+        </div>
+        <label class="dg-tpl">Template <select id="dg-preset"></select></label>
         <div id="dg-blocks" class="dg-blocks">
           <h3>Blocks</h3>
           <p class="hint tiny">Drag a block onto the label.</p>
@@ -412,10 +411,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/core.js?v=1.9"></script>
-  <script src="js/data.js?v=1.9"></script>
-  <script src="js/editor.js?v=1.9"></script>
-  <script src="js/labels.js?v=1.9"></script>
-  <script src="js/designer.js?v=1.9"></script>
+  <script src="js/core.js?v=2.1"></script>
+  <script src="js/data.js?v=2.1"></script>
+  <script src="js/editor.js?v=2.1"></script>
+  <script src="js/labels.js?v=2.1"></script>
+  <script src="js/designer.js?v=2.1"></script>
 </body>
 </html>

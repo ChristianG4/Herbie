@@ -60,28 +60,40 @@ function fillFromLabel(d, src, base) {
 // rows pinned to the bottom always come last
 function orderRows(d) { d.rows = d.rows.filter(r => r.pin !== 'bottom').concat(d.rows.filter(r => r.pin === 'bottom')); }
 
+// the designer always starts with an empty label; a template (ready-made layout or own design) can be loaded
+function uniqueName(base) {
+  const names = state.settings.designs.map(d => (d.name || '').toLowerCase());
+  if (!names.includes(base.toLowerCase())) return base;
+  let i = 2; while (names.includes(`${base} ${i}`.toLowerCase())) i++;
+  return `${base} ${i}`;
+}
+function fillTemplates() {
+  const own = state.settings.designs;
+  $('#dg-preset').innerHTML = `<option value="">Choose ...</option><option value="empty">Empty label</option>
+    <optgroup label="Ready-made layouts">${Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.name)}</option>`).join('')}</optgroup>
+    ${own.length ? `<optgroup label="Your designs">${own.map((d, i) => `<option value="own:${i}">${esc(d.name || 'My design')}</option>`).join('')}</optgroup>` : ''}`;
+}
 function openDesigner() {
-  const s = state.settings, own = ownDesign();
-  ed.idx = ownIndex(); // -1: a new design, made from the selected ready-made layout
-  ed.d = toEditable(clone(own || PRESETS[s.layout] || PRESETS.classic), own && own.look ? own.look : sidebarLook());
-  if (!own) ed.d.name = 'My design';
+  ed.d = toEditable({ rows: [] }, sidebarLook());
+  ed.d.name = uniqueName('My design');
   ed.sel = null;
   ed.rec = Math.max(0, state.records.indexOf(sortedRecords()[0] || state.records[0]));
-  $('#dg-name').value = ed.d.name || '';
+  $('#dg-name').value = ed.d.name;
+  fillTemplates();
   lookToForm(); labelToForm(); pageToForm();
+  hist.past = []; hist.future = []; hist.cur = null;
   ddlg.showModal();
   renderEditor();
 }
 $('#btn-design').addEventListener('click', openDesigner);
 $('#dg-cancel').addEventListener('click', () => ddlg.close());
 $('#dg-apply').addEventListener('click', async () => {
+  if (!ed.d.rows.length) { await alertBox('The label is empty', 'Drag at least one block onto the label, or choose a template.'); return; }
   ed.d.name = $('#dg-name').value.trim() || 'My design';
   const d = sanitizeDesign(ed.d), s = state.settings;
-  if (ed.idx >= 0 && s.designs[ed.idx]) s.designs[ed.idx] = d;
-  else if (!(await addDesign(d))) return;
-  else ed.idx = s.designs.indexOf(d);
-  s.layout = 'own:' + ed.idx;
-  saveSettings(); applySettingsToForm(); renderPreview(); updateDesignList();
+  if (!(await addDesign(d))) return; // a design with the same name is updated
+  s.layout = 'own:' + s.designs.indexOf(d);
+  saveSettings(); applySettingsToForm(); renderPreview();
   ddlg.close();
 });
 // adds a design to the list (a design with the same name is replaced); false when the list is full
@@ -94,20 +106,46 @@ async function addDesign(d) {
   }
   s.designs.push(d); return true;
 }
-// names of the loaded designs, shown under "Load table"
-function updateDesignList() {
-  const el = $('#design-list-1'), n = state.settings.designs.map(d => d.name || 'My design');
-  el.hidden = !n.length;
-  el.textContent = n.length ? `Designs: ${n.join(', ')} (${n.length} of ${MAX_DESIGNS})` : '';
-}
 $('#dg-preset').addEventListener('change', e => {
-  const p = PRESETS[e.target.value]; e.target.value = '';
-  if (!p) return;
-  const keep = { images: ed.d.images, look: ed.d.look, customFields: ed.d.customFields, label: ed.d.label, page: ed.d.page };
-  ed.d = toEditable(clone(p), keep.look);
-  Object.assign(ed.d, keep, { name: $('#dg-name').value || 'My design' });
+  const v = e.target.value; e.target.value = '';
+  const keep = { images: ed.d.images, look: ed.d.look, customFields: ed.d.customFields, label: ed.d.label, page: ed.d.page, name: $('#dg-name').value || 'My design' };
+  if (v === 'empty') { ed.d.rows = []; ed.sel = null; renderEditor(); return; }
+  const own = /^own:\d+$/.test(v) ? state.settings.designs[+v.slice(4)] : null;
+  if (own) { // an own design is loaded as it is; keeping its name updates it on "Use this design"
+    ed.d = toEditable(clone(own), own.look);
+    $('#dg-name').value = own.name || 'My design';
+    lookToForm(); labelToForm(); pageToForm();
+  } else {
+    const p = PRESETS[v]; if (!p) return;
+    ed.d = toEditable(clone(p), keep.look);
+    Object.assign(ed.d, keep);
+  }
   ed.sel = null;
   renderEditor();
+});
+
+// ---- undo and redo: every change of the design is a step (Ctrl+Z, Ctrl+Y)
+const hist = { past: [], future: [], cur: null };
+function snap() {
+  const j = JSON.stringify(ed.d);
+  if (j === hist.cur) return;
+  if (hist.cur != null) { hist.past.push(hist.cur); if (hist.past.length > 80) hist.past.shift(); }
+  hist.future = []; hist.cur = j;
+}
+function stepHist(back) {
+  const from = back ? hist.past : hist.future, to = back ? hist.future : hist.past;
+  if (!from.length) return;
+  to.push(hist.cur); hist.cur = from.pop();
+  ed.d = JSON.parse(hist.cur); ed.sel = null;
+  lookToForm(); labelToForm(); pageToForm(); renderEditor();
+}
+ddlg.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const el = document.activeElement, typing = el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && /^(text|number|search)$/.test(el.type)));
+  if (typing) return; // text fields keep their own undo
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); stepHist(true); }
+  else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); stepHist(false); }
 });
 
 // ---- label settings of the design (language, header, formats); they replace the sidebar while the design is used
@@ -200,6 +238,7 @@ function renderEditor() {
   stage.classList.toggle('noguides', !$('#dg-guides').checked);
   requestAnimationFrame(() => snapRuled(stage));
   renderImageList();
+  snap();
   if (ed.sel && ed.sel.kind === 'cell') { const el = stage.querySelector(`.dcell[data-r="${ed.sel.r}"][data-c="${ed.sel.c}"]`); if (el) el.classList.add('sel'); else ed.sel = null; }
   if (ed.sel && ed.sel.kind === 'img') { const el = stage.querySelector(`.dimg[data-img="${ed.sel.i}"]`); if (el) el.classList.add('sel'); else ed.sel = null; }
   renderProps();
@@ -347,7 +386,7 @@ stage.addEventListener('pointerdown', e => {
     o.y = Math.round(Math.max(-20, Math.min(100, start.oy + (ev.clientY - start.y) / lab.height * 100)) * 10) / 10;
     im.style.left = o.x + '%'; im.style.top = o.y + '%';
   };
-  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); snap(); };
   window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
 });
 
@@ -634,7 +673,7 @@ function exportDesign(d) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-function importDesign(file, intoEditor) {
+function importDesign(file, intoEditor, fromStart) {
   const r = new FileReader();
   r.onload = () => {
     let data = null;
@@ -645,14 +684,18 @@ function importDesign(file, intoEditor) {
     addDesign(d).then(ok => {
       if (!ok) return;
       state.settings.layout = 'own:' + state.settings.designs.indexOf(d);
-      saveSettings(); applySettingsToForm(); renderPreview(); updateDesignList();
+      saveSettings(); applySettingsToForm(); renderPreview();
+      if (fromStart) { const b = $('#btn-import-design-1'); b.textContent = '\u2713 Design loaded'; setTimeout(() => { b.textContent = 'Import design'; }, 2000); }
     });
   };
   r.readAsText(file);
 }
 $('#btn-import-design').addEventListener('click', () => $('#design-file').click());
 $('#btn-import-design-1').addEventListener('click', () => $('#design-file').click());
-$('#design-file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importDesign(f, false); });
+let importFromStart = false;
+$('#btn-import-design').addEventListener('click', () => { importFromStart = false; });
+$('#btn-import-design-1').addEventListener('click', () => { importFromStart = true; });
+$('#design-file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importDesign(f, false, importFromStart); });
 $('#dg-import').addEventListener('click', () => $('#dg-file').click());
 $('#dg-file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importDesign(f, true); });
 $('#dg-export').addEventListener('click', () => { ed.d.name = $('#dg-name').value.trim() || 'My design'; exportDesign(ed.d); });
@@ -665,7 +708,6 @@ $('#dg-export').addEventListener('click', () => { ed.d.name = $('#dg-name').valu
 $('#s-lang').innerHTML = Object.entries(TEXT).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
 state.settings.designs = state.settings.designs.slice(0, MAX_DESIGNS).map(d => sanitizeDesign(d));
 if (!PRESETS[state.settings.layout] && ownIndex() < 0) state.settings.layout = 'classic';
-updateDesignList();
 applySettingsToForm();
 checkResume();
 window.addEventListener('beforeunload', saveSessionNow);

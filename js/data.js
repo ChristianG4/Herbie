@@ -22,7 +22,12 @@ const dz = $('#dropzone');
 $('#file-input').addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; });
 ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
-dz.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) readFile(f); });
+dz.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (!f) return; if (/\.json$/i.test(f.name)) importDesign(f, false, true); else readFile(f); });
+// the "Import design" button also takes a dropped design file
+const dbtn = $('#btn-import-design-1');
+['dragenter', 'dragover'].forEach(ev => dbtn.addEventListener(ev, e => { e.preventDefault(); dbtn.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => dbtn.addEventListener(ev, e => { e.preventDefault(); dbtn.classList.remove('over'); }));
+dbtn.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) importDesign(f, false, true); });
 
 function ensureXLSX() {
   if (typeof XLSX === 'undefined') { alert('The spreadsheet library could not be loaded. Please check your internet connection and reload.'); return false; }
@@ -93,8 +98,11 @@ function setData(headers, rows) {
   renderMapping();
   enableTabs(true);
   saveSession();
-  showTab('spalten');
+  // stay on step 1: the user goes on with "Continue"
+  $('#loaded-name').textContent = `${state.fileName || 'table'}, ${rows.length} rows`;
+  $('#loaded').hidden = false; $('#resume').hidden = true;
 }
+$('#btn-to-columns').addEventListener('click', () => showTab('spalten'));
 
 // "Höhe ü. NN" -> "hoeheuenn": case, umlauts, spaces and punctuation do not matter
 function compact(s) {
@@ -285,7 +293,6 @@ $('#btn-demo').addEventListener('click', () => {
   $('#sheet-select-wrap').hidden = true;
   setData(headers, rows);
   if (!$('#s-title').value || state.settings.title === 'Herbarium') { state.settings.title = 'Herbarium Jane Doe'; saveSettings(); applySettingsToForm(); }
-  toast('Example data loaded');
 });
 
 // ================================================================ session persistence

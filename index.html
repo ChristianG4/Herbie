@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="author" content="Hans Christian Groß">
-  <meta name="description" content="Create printable herbarium labels from a spreadsheet: map columns, place localities on a map, print. Everything runs locally in your browser.">
+  <meta name="description" content="Create printable herbarium labels from a spreadsheet: map columns, place localities on a map, design and print. Everything runs locally in your browser.">
   <title>Herbie · Herbarium labels</title>
   <link rel="icon" type="image/png" href="assets/logo-small.png">
   <link rel="apple-touch-icon" href="assets/logo-small.png">
@@ -66,11 +66,11 @@
             <label for="sheet-select">Sheet</label>
             <select id="sheet-select"></select>
           </div>
-          <p class="hint">Tell Herbie which column of your table holds which information. Known column names are detected automatically. Unmapped fields stay empty and can be filled in per specimen later.</p>
+          <p class="hint">Tell Herbie which column of your table holds which information. Known column names are detected automatically, no matter how they are written (upper or lower case, spaces, umlauts). Unmapped fields stay empty and can be filled in per specimen later. Fields marked <span class="star">*</span> belong on every herbarium label and are strongly recommended, but none of them is required.</p>
           <div id="mapping" class="mapping"></div>
           <div class="custom-box">
             <h3>Own fields</h3>
-            <p class="hint">Want more on the label? Add any other column of your table, e.g. a colour or a project, and choose the name that should be printed. Example: column <i>col</i>, name <i>Colour</i> prints "Colour: red".</p>
+            <p class="hint">Want more on the label? Add any other column of your table, e.g. a flower colour or a habitat, and choose the name that should be printed. Example: column <i>col</i>, name <i>Colour</i> prints "Colour: red". Only columns not used above can be chosen.</p>
             <div id="custom-list"></div>
             <button type="button" class="btn small" id="btn-add-custom">+ Add own field</button>
           </div>
@@ -90,6 +90,7 @@
             <span id="label-count"></span>
             <button class="btn small" id="btn-open-data">View / edit data</button>
           </div>
+
           <h2>Label</h2>
           <label>Label language <select id="s-lang"></select></label>
           <label>Header <input type="text" id="s-title" placeholder="Herbarium First Last"></label>
@@ -105,19 +106,31 @@
             </label>
             <label>Font size (pt) <input type="number" id="s-size" min="6" max="16" step="0.5"></label>
           </div>
-          <div class="two">
-            <label>Date
-              <select id="s-datefmt">
-                <option value="dmy">12.04.2026</option>
-                <option value="roman">12.IV.2026</option>
-                <option value="iso">2026-04-12</option>
-                <option value="long">12 April 2026</option>
-              </select>
+          <label>Date format
+            <select id="s-datefmt">
+              <option value="dmy">DD.MM.YYYY</option>
+              <option value="roman">D.M.YYYY, month in Roman numerals</option>
+              <option value="iso">YYYY-MM-DD (ISO 8601)</option>
+              <option value="long">D Month YYYY (written out)</option>
+            </select>
+          </label>
+          <label>Coordinate format
+            <select id="s-coordfmt">
+              <option value="dec">Decimal degrees (DD)</option>
+              <option value="ddm">Degrees, decimal minutes (DDM)</option>
+              <option value="dms">Degrees, minutes, seconds (DMS)</option>
+            </select>
+          </label>
+
+          <fieldset>
+            <legend>Fields on the label</legend>
+            <p class="hint tiny">Tick to print, drag to change the order.</p>
+            <ul id="show-list" class="show-list"></ul>
+            <label class="inline"><input type="checkbox" data-show="legdet"> Leg. / Det.</label>
+            <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash
+              <span class="info-i" tabindex="0" data-tip='Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". The Minimal layout has no field names and always leaves empty fields out.'>i</span>
             </label>
-            <label>Coordinates
-              <select id="s-coordfmt"><option value="dec">50.80912° N</option><option value="dms">50°48'32.8" N</option></select>
-            </label>
-          </div>
+          </fieldset>
 
           <h2>Design</h2>
           <div class="field-label">Layout</div>
@@ -126,6 +139,7 @@
             <button type="button" data-layout="table">Table</button>
             <button type="button" data-layout="name">Name first</button>
             <button type="button" data-layout="minimal">Minimal</button>
+            <button type="button" data-layout="custom" class="wide" hidden>My design</button>
           </div>
           <label>Frame
             <select id="s-frame">
@@ -165,14 +179,11 @@
             <button type="button" class="tex-tile tx-hatch" data-tex="hatch"><span>Hatch</span></button>
           </div>
 
-          <fieldset>
-            <legend>Fields on the label</legend>
-            <p class="hint tiny">Tick to print, drag to change the order.</p>
-            <ul id="show-list" class="show-list"></ul>
-            <label class="inline"><input type="checkbox" data-show="legdet"> Leg. / Det. (footer line)</label>
-            <label class="inline"><input type="checkbox" id="s-empty"> Print empty fields with a dash</label>
-            <p class="hint tiny">Off (default): a field without a value is simply left out on that label. On: it is printed as e.g. "Elevation: -". The Minimal layout has no field names and always leaves empty fields out.</p>
-          </fieldset>
+          <div class="design-box">
+            <button type="button" class="btn small" id="btn-design">Create design</button>
+            <button type="button" class="btn small ghost" id="btn-import-design">Import design</button>
+            <input type="file" id="design-file" accept=".json,application/json" hidden>
+          </div>
 
           <h2>Page</h2>
           <div class="two">
@@ -189,10 +200,9 @@
               </select>
             </label>
           </div>
-          <div class="three">
+          <div class="two">
             <label>Columns <input type="number" id="s-cols" min="1" max="4"></label>
             <label>Rows <input type="number" id="s-rows" min="1" max="8"></label>
-            <label>Skip <input type="number" id="s-skip" min="0" max="31" title="Skip labels already used on the first sheet"></label>
           </div>
           <div class="two">
             <label>Page margin (mm) <input type="number" id="s-margin" min="0" max="30" step="0.5"></label>
@@ -230,7 +240,7 @@
       <div class="table-pane">
         <div class="row gap wrap table-tools">
           <input type="search" id="list-filter" placeholder="Filter by name, number, locality ...">
-          <label class="small-text"><input type="checkbox" id="filter-missing"> only without coordinates</label>
+          <label class="small-text"><input type="checkbox" id="filter-missing"> without coordinates</label>
           <span class="spacer"></span>
           <button class="link" id="btn-all-on">all on</button>
           <button class="link" id="btn-all-off">all off</button>
@@ -245,14 +255,15 @@
 
       <div class="edit-pane">
         <form id="search-form" class="search-row">
-          <input type="search" id="search-input" placeholder="Search a place, e.g. Lahnberge Marburg">
+          <input type="search" id="search-input" placeholder="Search a place to move the map, e.g. Lahnberge Marburg">
           <button class="btn" type="submit">Search</button>
         </form>
         <div class="map-wrap">
           <ul id="search-results" class="search-results" hidden></ul>
           <div id="map"></div>
+          <button type="button" id="map-clear" class="map-clear" title="Remove this locality to set a new one" hidden>Clear coordinates</button>
         </div>
-        <p class="hint">Click on the map to set the locality of the selected specimen. The marker can be dragged.</p>
+        <p class="hint" id="map-hint">Click on the map to set the locality of the selected specimen.</p>
 
         <div class="row between edit-head">
           <h3 id="edit-title">No specimen selected</h3>
@@ -262,13 +273,58 @@
           </div>
         </div>
         <form id="edit-form" class="edit-form"></form>
-        <div class="row gap wrap" id="coord-tools">
-          <button class="btn small" id="btn-geocode">Find locality text on map</button>
-          <button class="btn small" id="btn-elev">Get elevation</button>
-          <button class="btn small ghost" id="btn-copy-same">Copy coordinates to same locality</button>
-          <button class="btn small ghost" id="btn-clear-coord">Clear coordinates</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- LABEL DESIGNER -->
+  <dialog id="design-dialog" class="design-dialog">
+    <div class="dlg-head">
+      <h2>Label designer</h2>
+      <input type="text" id="dg-name" class="dg-name" placeholder="Name of your design" aria-label="Name of your design">
+      <span class="spacer"></span>
+      <select id="dg-preset" aria-label="Start from a layout">
+        <option value="">Start from ...</option>
+        <option value="classic">Classic</option>
+        <option value="table">Table</option>
+        <option value="name">Name first</option>
+        <option value="minimal">Minimal</option>
+      </select>
+      <button class="btn small ghost" id="dg-import">Import</button>
+      <button class="btn small ghost" id="dg-export">Export</button>
+      <input type="file" id="dg-file" accept=".json,application/json" hidden>
+      <button class="btn small ghost" id="dg-cancel">Cancel</button>
+      <button class="btn small primary" id="dg-apply">Use this design</button>
+    </div>
+    <div class="dg-body">
+      <aside class="dg-left" id="dg-blocks">
+        <h3>Blocks</h3>
+        <p class="hint tiny">Click to add, or drag onto the label.</p>
+        <button type="button" class="dg-add" draggable="true" data-add="header">Header</button>
+        <button type="button" class="dg-add" draggable="true" data-add="name">Scientific name</button>
+        <button type="button" class="dg-add" draggable="true" data-add="nr">Specimen no.</button>
+        <button type="button" class="dg-add" draggable="true" data-add="fields">Field list</button>
+        <div class="dg-field">
+          <button type="button" class="dg-add" draggable="true" data-add="field">Single field:</button>
+          <select id="dg-field-add" aria-label="Field to add"></select>
+        </div>
+        <button type="button" class="dg-add" draggable="true" data-add="legdet">Leg. / Det.</button>
+        <button type="button" class="dg-add" draggable="true" data-add="text">Free text</button>
+        <button type="button" class="dg-add" draggable="true" data-add="line">Line</button>
+        <button type="button" class="dg-add" draggable="true" data-add="blank">Empty line</button>
+        <button type="button" class="dg-add" draggable="true" data-add="space">Flexible space</button>
+        <label class="dg-add dg-img">Image or logo<input type="file" id="dg-img-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
+        <p class="hint tiny">Frame, background, texture and font are set in the sidebar and saved with an exported design.</p>
+      </aside>
+      <div class="dg-center">
+        <div class="dg-stage" id="dg-stage"></div>
+        <div class="dg-recnav">
+          <button class="btn small ghost" id="dg-prev" title="Previous specimen">&#8592;</button>
+          <span id="dg-rec"></span>
+          <button class="btn small ghost" id="dg-next" title="Next specimen">&#8594;</button>
         </div>
       </div>
+      <aside class="dg-right" id="dg-props"></aside>
     </div>
   </dialog>
 
@@ -277,7 +333,6 @@
     <form method="dialog">
       <h3 id="cf-title"></h3>
       <p id="cf-text"></p>
-      <div id="cf-options" class="cf-options"></div>
       <div class="row end gap">
         <button class="btn ghost" value="cancel">Cancel</button>
         <button class="btn primary" value="ok" id="cf-ok">OK</button>

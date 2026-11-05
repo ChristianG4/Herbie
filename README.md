@@ -6,9 +6,9 @@
 
 <p align="center">Turn your collection spreadsheet into beautiful, print-ready herbarium labels in minutes. No installation, no account, and your data never leaves your browser.</p>
 
-**Pin every find exactly.** Set the precise locality of each specimen with a click on the map, search places by name, or let Herbie look up all localities and elevations at once.
+**Pin every find exactly.** Set the precise locality of each specimen with a click on the map and look up its elevation with one more click. Once set, a locality is locked, so nothing moves by accident.
 
-**Make the labels yours, if you like.** Choose from different layouts, frames, colours and paper textures, pick the label language and decide which fields are printed and in which order. Or simply keep the defaults.
+**Make the labels yours, if you like.** Choose from ready-made layouts, frames, colours and paper textures, or build your own design in the label designer, logo included. Or simply keep the defaults.
 
 **Three steps, that's it:**
 
@@ -20,27 +20,27 @@
 
 ![Screenshot](docs/screenshot.png)
 
+## Set the exact locality of each find, quickly and easily
+
+![Data editor with map](docs/editor.png)
+
+Open **View / edit data** (or click a label) to see all specimens in a table next to an interactive map.
+
+- **Click on the map** to set the locality of a specimen. OpenStreetMap, topographic and satellite maps are available, and the search moves the map to any place.
+- **Locked once set:** a locality cannot be moved by accident. Use **Clear coordinates** to set a new one.
+- **Elevation with one click**, from the Copernicus GLO-90 terrain model. The source is noted and exported.
+- Coordinates already in your table, or written in the locality text (e.g. `Marburg, 50.8091, 8.8132`), are picked up automatically.
+- Printed as decimal degrees, degrees and decimal minutes, or degrees, minutes and seconds.
+
 ## Features
 
-- Reads `.xlsx`, `.xls`, `.ods` and `.csv`
-- Detects columns automatically (English, German and Darwin Core names)
-- Data editor with table, on/off switch per specimen and interactive map (OpenStreetMap, topographic, satellite): click to set a locality, drag the marker, search places
-- Picks up coordinates written in the locality text (e.g. `Marburg, 50.8091, 8.8132`)
-- Finds localities on the map from the locality text, for one specimen or all at once (only missing or overwrite all)
-- Fetches elevation from the Copernicus GLO-90 terrain model via Open-Meteo, for one specimen or all at once; the source is noted and exported
-- Copies coordinates to all specimens with the same locality
-- Every action explains itself and asks for confirmation first
-- Label language: English, German, French, Spanish, Italian, Portuguese, Dutch, Swedish, Polish, Czech or Latin (field names, compass letters, elevation unit)
-- Four label layouts (Classic, Table, Name first, Minimal), frame styles (or no frame), background colours and paper textures (paper, parchment, linen, leaves, dots, ruled, grid, hatch)
-- Customisable labels: header, font, size, date format (incl. Roman month), coordinate format
-- Choose which fields are printed and drag them into your preferred order
-- Own fields: print any extra column of your table under a name of your choice (e.g. column `col` as "Colour")
-- Empty fields are left out by default, or printed as "Elevation: -" if you prefer
-- Layout: A4 or US Letter, labels per page, margins, skip already used labels on a sheet
-- Correct name formatting: genus and epithets in italics, authors upright
-- Flags overfull labels in red
-- Exports the table with the added coordinates as `.xlsx`
-- Keeps your session in the browser so you can continue after reloading
+- Reads Excel, OpenDocument and CSV files and recognises the columns automatically
+- Labels in 11 languages, with correctly formatted scientific names
+- Four ready-made layouts, frames, colours and paper textures
+- Label designer for your own layout, logo included; designs can be exported and shared
+- Choose which fields are printed and in which order, and add any extra column of your table
+- Exports your table including the new coordinates and elevations
+- Your session is kept in the browser, so you can continue later
 
 ## Privacy
 
@@ -53,20 +53,24 @@ Your table is processed locally and never uploaded. External requests are made o
 | Place search | Nominatim (OpenStreetMap) | on click, with your search text |
 | Elevation | Open-Meteo | on click, with the specimen's coordinates |
 
-## Usage
+## Citation
 
-1. **Load table**: drop your Excel file onto the page (or download the template, or try the example data)
-2. **Columns**: check which column holds which information
-3. **Labels**: pick the label language and layout. **View / edit data** (or a click on a label) opens the data editor, where you switch labels on or off, correct entries and set localities on the map. Then click **Print / PDF**
+If you use Herbie to prepare specimens for a publication, a collection report or a thesis, please cite it:
 
-In the print dialog set margins to "None", scale to 100 % and turn off headers and footers.
+Groß, H. C. (2026). *Herbie: herbarium labels from spreadsheets* (Version 1.0.0) [Software]. https://github.com/ChristianG4/Herbie
 
-### Table structure
+```bibtex
+@software{gross_herbie_2026,
+  author  = {Groß, Hans Christian},
+  title   = {Herbie: herbarium labels from spreadsheets},
+  year    = {2026},
+  version = {1.0.0},
+  url     = {https://github.com/ChristianG4/Herbie}
+}
+```
 
-You need at least a column for the species or the specimen number. All other fields are optional:
+GitHub also offers this citation under **Cite this repository** on the right.
 
-`Date`, `Specimen no`, `Scientific name`, `Common name`, `Family`, `Collector`, `Determiner`, `Notes`, `Locality`, `Habitat`, `Latitude`, `Longitude`, `Elevation`
+## License
 
-German column names (`Art`, `Fundort`, `Belegsnummer`, ...) and Darwin Core terms are recognised as well.
-
-Coordinates can be decimal (`50.8091`, `50,8091`) or degrees, minutes, seconds (`50°48'32.8" N`).
+MIT © Hans Christian Groß

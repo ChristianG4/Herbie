@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use Herbie, please cite it as below."
+type: software
+title: "Herbie: herbarium labels from spreadsheets"
+abstract: "Browser-based tool to create printable herbarium labels from a spreadsheet, with an interactive map to set the locality of each specimen and a label designer."
+authors:
+  - family-names: "Groß"
+    given-names: "Hans Christian"
+    orcid: "https://orcid.org/0009-0007-4245-5264"
+version: 1.0.0
+date-released: 2026-11-03
+license: MIT
+repository-code: "https://github.com/ChristianG4/Herbie"
+url: "https://christiang4.github.io/Herbie/"
+keywords:
+  - herbarium
+  - herbarium labels
+  - botany
+  - specimens
+  - biodiversity
